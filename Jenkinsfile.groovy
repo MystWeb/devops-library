@@ -14,7 +14,7 @@ def unitTest = new UnitTest()
 env.buildType = "${JOB_NAME}".split("-")[1]
 
 // 打印WebHook变量值
-println("Object Kind：${object_kind}\nBefore：${before}\nAfter：${after}")
+println("Object Kind：${object_kind} \n Before：${before} \n After：${after}")
 println("Git Lab WebhookData：${webhookData}")
 
 // 使用readJSON工具解析JSON数据
