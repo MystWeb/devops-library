@@ -34,7 +34,7 @@ def AntBuild(configPath = "./build.xml") {
 /**
  * Golang构建
  */
-def GoBuild(configPath) {
+def GoBuild(configPath = "demo.go") {
     sh "go build ${configPath}"
 }
 
@@ -57,7 +57,7 @@ def YarnBuild() {
  * @param buildTool 构建工具
  * @param configPath 配置路径
  */
-def CodeBuild(buildTool, configPath) {
+def CodeBuild(buildTool) {
     switch (buildTool) {
         case "maven":
             MavenBuild()
@@ -69,10 +69,10 @@ def CodeBuild(buildTool, configPath) {
             GradleBuild()
             break;
         case "ant":
-            AntBuild(configPath)
+            AntBuild()
             break;
         case "go":
-            GoBuild(configPath)
+            GoBuild()
             break;
         case "npm":
             NpmBuild()
