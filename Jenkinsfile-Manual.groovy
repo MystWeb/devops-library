@@ -21,11 +21,11 @@ pipeline {
         skipDefaultCheckout true
     }
 
-	parameters {
-  		string defaultValue: 'http://192.168.20.191/devops/devops-maven-service.git', description: '仓库地址', name: 'srcUrl'
-  		string defaultValue: 'main', description: '分支名称', name: 'branchName'
-  		string defaultValue: 'f0b54c03-789d-4ca4-847d-29f83236ef8a', description: '访问凭据', name: 'credentialsId'
-	}
+    parameters {
+        string defaultValue: 'http://192.168.20.191/devops/devops-maven-service.git', description: '仓库地址', name: 'srcUrl'
+        string defaultValue: 'main', description: '分支名称', name: 'branchName'
+        string defaultValue: 'f0b54c03-789d-4ca4-847d-29f83236ef8a', description: '访问凭据', name: 'credentialsId'
+    }
 
     stages {
         stage("Checkout") {

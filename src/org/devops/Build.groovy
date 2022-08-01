@@ -55,7 +55,6 @@ def YarnBuild() {
 /**
  * Main-代码构建
  * @param buildTool 构建工具
- * @param configPath 配置路径
  */
 def CodeBuild(buildTool) {
     switch (buildTool) {
