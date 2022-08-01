@@ -11,7 +11,7 @@ def notice = new Notice()
 def unitTest = new UnitTest()
 
 // 任务名称截取构建类型（任务名称示例：devops-maven-service）
-env.buildType = "${JOB_NAME}".split("-")[1]
+// env.buildType = "${JOB_NAME}".split("-")[1]
 
 // 流水线
 pipeline {
@@ -22,9 +22,10 @@ pipeline {
     }
 
 	parameters {
-  		string defaultValue: 'http://192.168.20.191/devops/devops-maven-service.git', description: '仓库地址', name: 'srcUrl'
+  		string defaultValue: 'http://192.168.20.197/devops/devops-maven-service.git', description: '仓库地址', name: 'srcUrl'
   		string defaultValue: 'main', description: '分支名称', name: 'branchName'
   		string defaultValue: 'f0b54c03-789d-4ca4-847d-29f83236ef8a', description: '访问凭据', name: 'credentialsId'
+  		choice choices: ['maven', 'mavenSkip', 'gradle', 'ant', 'go', 'npm', 'yarn'], description: '构建类型', name: 'buildType'
 	}
 
     stages {
