@@ -72,6 +72,8 @@ pipeline {
             steps {
                 script {
                     println("CodeScan")
+                    profileName = "${JOB_NAME}".split("-")[0]
+                    codeScan.InitQualityProfiles("java", "${JOB_NAME}", profileName)
                     codeScan.CodeScan_Sonar("${env.branchName}")
                 }
             }

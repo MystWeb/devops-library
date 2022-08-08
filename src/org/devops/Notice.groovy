@@ -2,7 +2,7 @@ package org.devops
 
 /**
  * 电子邮件通知
- * @param address 邮箱地址
+ * @param address 邮箱地址（收件人）
  * @param buildStatus 构建状态
  * @return
  */
