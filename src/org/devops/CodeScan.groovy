@@ -7,18 +7,24 @@ package org.devops
  * https://github.com/xuhuisheng/sonar-l10n-zh、
  * https://github.com/gabrie-allaigre/sonar-gitlab-plugin
  */
-def CodeScan_Sonar(projectVersion) {
+def CodeScan_Sonar(projectVersion, commitId, projectId) {
     cliPath = "/data/cicd/sonar-scanner/bin"
     withCredentials([usernamePassword(credentialsId: '05d7379e-28a6-4dd2-9b35-1f907a1a05c8',
             usernameVariable: 'SONAR_USERNAME',
-            passwordVariable: 'SONAR_PASSWORD')]) {
+            passwordVariable: 'SONAR_PASSWORD'),
+                     string(credentialsId: '926a978a-5cef-49ca-8ff8-5351ed0700bf',
+                             variable: 'GITLAB_SONAR_TOKEN')]) {
         // 远程构建时推荐使用CommitID作为代码扫描-项目版本
         sh """
             ${cliPath}/sonar-scanner \
             -Dsonar.login=${SONAR_USERNAME} \
             -Dsonar.password=${SONAR_PASSWORD} \
             -Dsonar.projectVersion=${projectVersion} \
-            -Dsonar.branch.name=${projectVersion}
+            -Dsonar.branch.name=${projectVersion} \
+            -Dsonar.gitlab.commit_sha=${commitId} \
+            -Dsonar.gitlab.ref_name=${projectVersion} \
+            -Dsonar.gitlab.project_id=${projectId} \
+            -Dsonar.gitlab.user_token=${GITLAB_SONAR_TOKEN}
         """
     }
 }
@@ -31,6 +37,7 @@ def CodeScan_Sonar(projectVersion) {
  */
 def InitQualityProfiles(lang, projectName, profileName) {
     result = ProjectSearch(projectName)
+    println("InitQualityProfiles.ProjectSearch：" + result)
 
     if (result == false) {
         CreateProject(projectName)
@@ -110,13 +117,15 @@ def SonarRequest(apiUrl, method) {
                 """
         try {
             // JSON数据格式化
-            if (null != "${response}" || "${response}".trim().length() > 0) {
+            println("CodeScan.SonarRequest().try.response：" + response)
+            if ("" != "${response}" || "${response}".trim().length() > 0) {
                 response = readJSON text: """ ${response - "\n"} """
             } else {
                 response = readJSON text: """{"errors" : true}"""
             }
         } catch (e) {
             response = readJSON text: """{"errors" : true}"""
+            println("CodeScan.SonarRequest().catch：" + e)
         }
         return response
     }

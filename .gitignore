@@ -3,7 +3,7 @@ logs/
 user.gradle
 .gradle/
 target/
-build/
+branch/
 out/
 bin/
 
