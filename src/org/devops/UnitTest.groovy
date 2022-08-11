@@ -41,6 +41,9 @@ def CodeTest(buildTool) {
         case "maven":
             MavenTest()
             break;
+        case "mavenSkip":
+            println("maven Skip the unit tests")
+            break;
         case "gradle":
             GradleTest()
             break;
