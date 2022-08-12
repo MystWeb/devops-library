@@ -49,7 +49,7 @@ pipeline {
             steps {
                 script {
                     println("Build")
-                    if ("" == "${env.customBuild}" || "${env.customBuild}".trim().length() <= 0) {
+                    if (null == "${env.customBuild}" || "${env.customBuild}".trim().length() <= 0) {
                         build.CodeBuild("${env.buildType}")
                     } else {
                         custom.CustomCommands("${env.customBuild}")

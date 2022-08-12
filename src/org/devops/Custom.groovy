@@ -6,7 +6,7 @@ package org.devops
  * @param customCommand 自定义命令
  */
 def CustomCommands(customCommand) {
-    if (null == customCommand || customCommand.trim().length() <= 0) {
+    if ("" == customCommand || customCommand.trim().length() <= 0) {
         error "The parameter cannot be null！"
     }
 
