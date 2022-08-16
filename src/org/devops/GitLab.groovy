@@ -9,6 +9,23 @@ def GetCommitId() {
 }
 
 /**
+ * 获取Commit简短id
+ */
+def GetShortCommitId() {
+    commitId = sh returnStdout: true, script: "git rev-parse --short HEAD"
+    return commitId - "\n"
+}
+
+/**
+ * 获取Commit简短id
+ */
+def GetShortCommitIdByEightDigit() {
+    commitId = sh returnStdout: true, script: "git rev-parse HEAD"
+    commitId = commitId - "\n"
+    return commitId[0..7]
+}
+
+/**
  * 获取ProjectId
  * git fork：user-a/devops-service-app -> user-b/devops-service-app
  *
