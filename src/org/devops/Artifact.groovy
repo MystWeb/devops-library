@@ -9,7 +9,7 @@ package org.devops
  */
 def PushArtifactByApi(directory, filePath, fileName) {
     sh """
-        curl -X POST "http://192.168.20.197:8081/service/rest/v1/components?repository=devops-local" \\
+        curl -X POST "http://192.168.20.194:8081/service/rest/v1/components?repository=devops-local" \\
             -H "accept: application/json" \\
             -H "Content-Type: multipart/form-data" \\
             -F "raw.directory=${directory}" \\
@@ -36,7 +36,7 @@ def PushArtifactByNexusPlugin(artifactId, file, type, groupId, repository, versi
                                        type      : type]],
             credentialsId: '55c0f9ca-e3a4-4eee-a59d-14baf5344a28',
             groupId: groupId,
-            nexusUrl: '192.168.20.197:8081',
+            nexusUrl: '192.168.20.194:8081',
             nexusVersion: 'nexus3',
             protocol: 'http',
             repository: repository,
@@ -60,7 +60,7 @@ def PushArtifactByMavenCli(artifactId, file, type, groupId, repository, version)
             -Dfile=${file} \
             -Dpackaging=${type} \
             -DgroupId=${groupId} \
-            -Durl=http://192.168.20.197:8081/repository/${repository} \
+            -Durl=http://192.168.20.194:8081/repository/${repository} \
             -Dversion=${version} \
             -DrepositoryId=nexus-local-auth
     """
@@ -77,7 +77,7 @@ def PushArtifactByMavenCliAndPom(file, repository) {
         mvn deploy:deploy-file \
             -Dfile=${file} \
             -DpomFile=pom.xml \
-            -Durl=http://192.168.20.197:8081/repository/${repository} \
+            -Durl=http://192.168.20.194:8081/repository/${repository} \
             -DrepositoryId=nexus-local-auth
     """
 }

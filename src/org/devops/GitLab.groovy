@@ -38,10 +38,10 @@ def GetProjectId(groupName, projectName) {
         response = sh returnStdout: true,
                 script: """
                 curl --location --request GET \
-                http://192.168.20.197/api/v4/projects?search=${projectName} \
+                http://192.168.20.194/api/v4/projects?search=${projectName} \
                 --header "PRIVATE-TOKEN: ${GITLAB_SONAR_TOKEN}"
             """
-        response = readJSON text: response
+        response = readJSON text: response - "\n"
         if (response != []) {
             for (r in response) {
                 if (r["namespace"]["name"] == groupName) {

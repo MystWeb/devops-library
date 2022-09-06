@@ -107,7 +107,7 @@ def SonarRequest(apiUrl, method) {
     // 通过ApiPost、PostMan等工具的Basic auth认证方式，输入Sonar用户名&密码后，
     // 生成代码-cURL的 --header 'Authorization: Basic *******=' 添加至Jenkins 凭据
     withCredentials([string(credentialsId: "d1ba0306-34e8-4030-a055-bd66d8d4c3a0", variable: 'SONAR_TOKEN')]) {
-        sonarApi = "http://192.168.20.197:9000/api"
+        sonarApi = "http://192.168.20.194:9000/api"
         response = sh returnStdout: true,
                 script: """
                 curl --location \
