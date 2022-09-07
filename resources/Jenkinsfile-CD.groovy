@@ -1,21 +1,51 @@
+// 加载共享库
+@Library("mylib@main") _
+
+// 导入库
+
+import org.devops.Artifact
+import org.devops.GitLab
+
+// New实例化
+def gitlab = new GitLab()
+def artifact = new Artifact()
+
 pipeline {
     agent {
         label "build"
     }
 
+    parameters {
+        string defaultValue: 'main', description: '注意：选择发布分支', name: 'branchName'
+        choice choices: ['jar', 'war', 'html', 'go', 'py'], description: '注意：选择制品类型', name: 'artifactType'
+        choice choices: ['uat', 'stag', 'prod'], description: '注意：选择发布环境', name: 'envList'
+    }
+
     stages {
-        stage("PullArtifact") {
+        stage("Global") {
             steps {
                 script {
+                    // 任务名称截取构建类型（任务名称示例：devops-maven-service）
+//                    env.buildType = "${JOB_NAME}".split("-")[1]
                     // JOB任务前缀（业务名称/组名称）
                     env.buName = "${JOB_NAME}".split('-')[0]
                     env.serviceName = "${JOB_NAME}".split('_')[0]
-                    env.projectId = GetProjectId("${env.buName}", "${env.serviceName}")
-                    env.commitId = GetShortCommitIdByApi("${env.projectId}", "${env.branchName}")
-                    env.path = "${env.buName}/${env.serviceName}/${env.branchName}-${env.commitId}"
-                    // TODO .jar 后缀名动态处理
-                    env.packageName = "${env.serviceName}-${env.branchName}-${env.commitId}.jar"
-                    PullArtifact("${env.path}", "${env.packageName}")
+                    env.projectId = gitlab.GetProjectId("${env.buName}", "${env.serviceName}")
+                    env.commitId = gitlab.GetShortCommitIdByApi("${env.projectId}", "${env.branchName}")
+                    env.filePath = "${env.buName}/${env.serviceName}/${env.branchName}-${env.commitId}"
+                    env.fileName = "${env.serviceName}-${env.branchName}-${env.commitId}.${env.artifactType}"
+                    // 修改Jenkins构建描述
+                    currentBuild.description = """branchName：${env.branchName} \n"""
+                    // 修改Jenkins构建名称
+                    currentBuild.displayName = "${env.commitId}"
+                }
+            }
+        }
+
+        stage("PullArtifact") {
+            steps {
+                script {
+                    artifact.PullArtifactByApi("${env.filePath}", "${env.fileName}")
                 }
             }
         }
@@ -28,60 +58,4 @@ pipeline {
             }
         }
     }
-}
-
-/**
- * 获取ProjectId
- * git fork：user-a/devops-service-app -> user-b/devops-service-app
- *
- * @param groupName 组名称/命名空间
- * @param projectName 项目名称
- * @param token GitLab-Sonar-Token
- */
-def GetProjectId(groupName, projectName) {
-    apiUrl = "projects?search=${projectName}"
-    response = HttpReq("GET", apiUrl)
-    if (response != []) {
-        for (r in response) {
-            if (r["namespace"]["name"] == groupName) {
-                return response[0]["id"]
-            }
-        }
-    }
-}
-
-/**
- * 通过Api获取Commit简短id
- * @param projectId 项目id
- * @param branchName 分支名称
- */
-def GetShortCommitIdByApi(projectId, branchName) {
-    apiUrl = "projects/${projectId}/repository/branches/${branchName}"
-    response = HttpReq("GET", apiUrl)
-    shortId = response.commit.short_id - "\n"
-    // 命令：git rev-parse --short HEAD，输出：7位数commitId
-    return shortId[0..6]
-}
-
-def HttpReq(method, apiUrl) {
-    withCredentials([string(credentialsId: '926a978a-5cef-49ca-8ff8-5351ed0700bf', variable: 'GITLAB_SONAR_TOKEN')]) {
-        response = sh returnStdout: true,
-                script: """
-                curl --location --request ${method} \
-                http://192.168.20.194/api/v4/${apiUrl} \
-                --header "PRIVATE-TOKEN: ${GITLAB_SONAR_TOKEN}"
-            """
-        response = readJSON text: response - "\n"
-        return response
-    }
-}
-
-def PullArtifact(path, packageName) {
-    println("开始下载：http://192.168.20.194:8081/repository/devops-local/${path}/${packageName}")
-    sh """
-        curl http://192.168.20.194:8081/repository/devops-local/${path}/${packageName} \
-        -u admin:proaim@2013 \
-        -o ${packageName} -s
-    """
-    println("下载完成：http://192.168.20.194:8081/repository/devops-local/${path}/${packageName}")
 }

@@ -47,7 +47,7 @@ pipeline {
                     // 任务名称截取构建类型（任务名称示例：devops-maven-service）
 //                    env.buildType = "${JOB_NAME}".split("-")[1]
                     // Git提交ID
-                    env.commitId = gitlab.GetShortCommitId()
+                    env.commitId = gitlab.GetShortCommitIdByEightDigit()
                     // JOB任务前缀（业务名称/组名称）
                     env.buName = "${JOB_NAME}".split('-')[0]
                     env.serviceName = "${JOB_NAME}".split('_')[0]

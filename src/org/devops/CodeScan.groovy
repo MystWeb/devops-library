@@ -54,7 +54,7 @@ def InitQualityProfiles(lang, projectName, profileName) {
  */
 def UpdateQualityProfiles(lang, projectName, profileName) {
     apiUrl = "qualityprofiles/add_project?language=${lang}&project=${projectName}&qualityProfile=${profileName}"
-    response = SonarRequest(apiUrl, "POST")
+    response = SonarRequest("POST", apiUrl)
 
     if (response.errors != true) {
         println("ERROR: UpdateQualityProfiles ${response.errors}...")
@@ -71,7 +71,7 @@ def UpdateQualityProfiles(lang, projectName, profileName) {
  */
 def CreateProject(projectName) {
     apiUrl = "projects/create?name=${projectName}&project=${projectName}"
-    response = SonarRequest(apiUrl, "POST")
+    response = SonarRequest("POST", apiUrl)
     println("apiUrl：" + apiUrl + "\nresponse：" + response)
     try {
         if (response.project.key == projectName) {
@@ -90,7 +90,7 @@ def CreateProject(projectName) {
  */
 def ProjectSearch(projectName) {
     apiUrl = "projects/search?projects=${projectName}"
-    response = SonarRequest(apiUrl, "GET")
+    response = SonarRequest("GET", apiUrl)
     println("apiUrl：" + apiUrl + "\nresponse：" + response)
     if (response.paging.total == 0) {
         println("Project not found!.....")
@@ -100,10 +100,10 @@ def ProjectSearch(projectName) {
 }
 /**
  * SonarRestApi Sonar请求
- * @param apiUrl API URL
  * @param method 请求方法
+ * @param apiUrl API URL
  */
-def SonarRequest(apiUrl, method) {
+def SonarRequest(method, apiUrl) {
     // 通过ApiPost、PostMan等工具的Basic auth认证方式，输入Sonar用户名&密码后，
     // 生成代码-cURL的 --header 'Authorization: Basic *******=' 添加至Jenkins 凭据
     withCredentials([string(credentialsId: "d1ba0306-34e8-4030-a055-bd66d8d4c3a0", variable: 'SONAR_TOKEN')]) {

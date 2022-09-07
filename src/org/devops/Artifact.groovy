@@ -81,3 +81,17 @@ def PushArtifactByMavenCliAndPom(file, repository) {
             -DrepositoryId=nexus-local-auth
     """
 }
+
+/**
+ * Nexus Api下载制品
+ * @param filePath 文件路径
+ * @param fileName 文件名称
+ * @return
+ */
+def PullArtifactByApi(filePath, fileName) {
+    sh """
+        curl http://192.168.20.194:8081/repository/devops-local/${filePath}/${fileName} \
+        -u admin:proaim@2013 \
+        -o ${fileName} -s
+    """
+}
