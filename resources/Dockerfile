@@ -1,0 +1,24 @@
+# Start with a base image containing Maven runtime
+FROM maven:3.8-jdk-11 as BUILD
+
+# Add Maintainer Info
+LABEL maintainer="ziming.xing@proaimltd.com"
+
+# Maven Build
+COPY . /usr/src/app
+#RUN mvn --batch-mode -f /usr/src/app/pom.xml clean package
+
+# Start with a base image containing Java runtime
+FROM openjdk:11-jdk
+ENV PORT 8080
+EXPOSE 8080
+
+# Add arthas
+COPY --from=hengyunabc/arthas:latest /opt/arthas /opt/arthas
+
+# Add the built artifact
+COPY --from=BUILD /usr/src/app/target /opt/target
+WORKDIR /opt/target
+
+# Run the jar file
+CMD ["/bin/bash", "-c", "find -type f -name 'devops-maven-service-main-*.jar' | xargs java -jar"]

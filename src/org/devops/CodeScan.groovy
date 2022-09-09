@@ -3,7 +3,7 @@ package org.devops
 /**
  * 代码扫描-Sonar
  * @param projectVersion 代码扫描-Sonar-项目版本（推荐使用分支名称）
- * 插件安装：https://github.com/mc1arke/sonarqube-community-branch-plugin、
+ * 插件链接：https://github.com/mc1arke/sonarqube-community-branch-plugin、
  * https://github.com/xuhuisheng/sonar-l10n-zh、
  * https://github.com/gabrie-allaigre/sonar-gitlab-plugin
  */

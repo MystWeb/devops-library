@@ -32,8 +32,6 @@ pipeline {
                     env.serviceName = "${JOB_NAME}".split('_')[0]
                     env.projectId = gitlab.GetProjectId("${env.buName}", "${env.serviceName}")
                     env.commitId = gitlab.GetShortCommitIdByApi("${env.projectId}", "${env.branchName}")
-                    env.filePath = "${env.buName}/${env.serviceName}/${env.branchName}-${env.commitId}"
-                    env.fileName = "${env.serviceName}-${env.branchName}-${env.commitId}.${env.artifactType}"
                     // 修改Jenkins构建描述
                     currentBuild.description = """branchName：${env.branchName} \n"""
                     // 修改Jenkins构建名称
@@ -45,7 +43,9 @@ pipeline {
         stage("PullArtifact") {
             steps {
                 script {
-                    artifact.PullArtifactByApi("${env.filePath}", "${env.fileName}")
+                    filePath = "${env.buName}/${env.serviceName}/${env.branchName}-${env.commitId}"
+                    fileName = "${env.serviceName}-${env.branchName}-${env.commitId}.${env.artifactType}"
+                    artifact.PullArtifactByApi("${filePath}", "${fileName}")
                 }
             }
         }

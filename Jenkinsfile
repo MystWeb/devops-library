@@ -13,6 +13,7 @@ def custom = new Custom()
 def codeScan = new CodeScan()
 def gitlab = new GitLab()
 def artifact = new Artifact()
+def docker = new Docker()
 
 // 流水线
 pipeline {
@@ -117,6 +118,16 @@ pipeline {
                     sh "cd target ; mv ${fileName} ${newFileName}"
                     // 上传制品
                     artifact.PushArtifactByApi("${env.buName}/${env.serviceName}/${version}", "target", newFileName)
+                }
+            }
+        }
+
+        stage("DockerBuild") {
+            steps {
+                script {
+                    imageName = "${env.buName}/${env.serviceName}"
+                    imageTag = "${env.branchName}-${env.commitID}"
+                    docker.DockerBuildAndPushImage("${imageName}", "${imageTag}")
                 }
             }
         }
