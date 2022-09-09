@@ -22,15 +22,13 @@ def DeleteArtifactTag(projectName, repoName, tagName) {
     sh """ curl -X DELETE "${harborAPI}/${apiURL}" -H "accept: application/json"  -u admin:Harbor12345 """
 }
 
-// 获取镜像的所有标签
-// devops-maven-service
 /**
  * 获取镜像的所有标签
  * 例：devops-maven-service
  * @param projectName Harbor项目名称/GitLab组名称
  * @param repoName Harbor仓库名称
  * @return 标签列表
- * TODO：如果Harbor存在空标签镜像，需要删除空标签镜像，否则会出现Exception：groovy.lang.MissingPropertyException: No such property: name for class: net.sf.json.JSONNull
+ * TODO：如果Harbor存在空标签镜像，需要删除空标签镜像，否则出现Exception：groovy.lang.MissingPropertyException: No such property: name for class: net.sf.json.JSONNull
  */
 def GetArtifactTag(projectName, repoName) {
     harborAPI = "http://192.168.20.194:8088/api/v2.0/projects/${projectName}/repositories/${repoName}"
