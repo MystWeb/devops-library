@@ -21,11 +21,12 @@ pipeline {
 
     options {
         skipDefaultCheckout true
+        buildDiscarder logRotator(daysToKeepStr: '30', numToKeepStr: '30')
     }
 
     parameters {
         string defaultValue: 'http://192.168.20.194/devops/devops-maven-service.git', description: '仓库地址', name: 'srcUrl'
-        string defaultValue: 'main', description: '分支名称', name: 'branchName'
+        string defaultValue: 'RELEASE-1.1.1', description: '分支名称', name: 'branchName'
         string defaultValue: 'f0b54c03-789d-4ca4-847d-29f83236ef8a', description: '访问凭据-GitLab', name: 'credentialsId'
         choice choices: ['maven', 'custom', 'mavenSkip', 'gradle', 'ant', 'go', 'npm', 'yarn'], description: '构建类型', name: 'buildType'
         string defaultValue: '', name: 'customBuild', description: '自定义构建命令（示例：mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests && mvn test）'
@@ -132,6 +133,13 @@ pipeline {
             }
         }
 
+    }
+
+    post {
+        always {
+            // Delete workspace when build is done
+            cleanWs()
+        }
     }
 
 }

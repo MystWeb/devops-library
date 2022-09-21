@@ -8,15 +8,19 @@ package org.devops
  * @return
  */
 def PushArtifactByApi(directory, filePath, fileName) {
-    sh """
-        curl -X POST "http://192.168.20.194:8081/service/rest/v1/components?repository=devops-local" \\
-            -H "accept: application/json" \\
-            -H "Content-Type: multipart/form-data" \\
-            -F "raw.directory=${directory}" \\
-            -F "raw.asset1=@${filePath}/${fileName};type=application/java-archive" \\
-            -F "raw.asset1.filename=${fileName}" \\
-            -u admin:proaim@2013
-    """
+    withCredentials([usernamePassword(credentialsId: '0cbf60e3-319d-464a-8efe-cf83ebeb97ff',
+            usernameVariable: 'NEXUS_USERNAME',
+            passwordVariable: 'NEXUS_PASSWORD')]) {
+        sh """
+            curl -X POST "http://192.168.20.194:8081/service/rest/v1/components?repository=devops-local" \\
+                -H "accept: application/json" \\
+                -H "Content-Type: multipart/form-data" \\
+                -F "raw.directory=${directory}" \\
+                -F "raw.asset1=@${filePath}/${fileName};type=application/java-archive" \\
+                -F "raw.asset1.filename=${fileName}" \\
+                -u "${NEXUS_USERNAME}":"${NEXUS_PASSWORD}"
+        """
+    }
 }
 
 /**
@@ -89,9 +93,13 @@ def PushArtifactByMavenCliAndPom(file, repository) {
  * @return
  */
 def PullArtifactByApi(filePath, fileName) {
-    sh """
-        curl http://192.168.20.194:8081/repository/devops-local/${filePath}/${fileName} \
-        -u admin:proaim@2013 \
-        -o ${fileName} -s
-    """
+    withCredentials([usernamePassword(credentialsId: '0cbf60e3-319d-464a-8efe-cf83ebeb97ff',
+            usernameVariable: 'NEXUS_USERNAME',
+            passwordVariable: 'NEXUS_PASSWORD')]) {
+        sh """
+            curl http://192.168.20.194:8081/repository/devops-local/${filePath}/${fileName} \
+            -u "${NEXUS_USERNAME}":"${NEXUS_PASSWORD}" \
+            -o ${fileName} -s
+        """
+    }
 }
