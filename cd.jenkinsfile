@@ -2,16 +2,16 @@
 @Library("mylib@main") _
 
 // 导入库
-
-
 import org.devops.Ansible
 import org.devops.Artifact
 import org.devops.GitLab
+import org.devops.SaltStack
 
 // New实例化
 def gitlab = new GitLab()
 def artifact = new Artifact()
 def ansible = new Ansible()
+def saltStack = new SaltStack()
 
 pipeline {
     agent {
@@ -26,11 +26,15 @@ pipeline {
     parameters {
         string defaultValue: 'RELEASE-1.1.1', description: '注意：选择发布分支', name: 'branchName'
         choice choices: ['jar', 'war', 'html', 'go', 'py'], description: '注意：选择制品类型', name: 'artifactType'
-        choice choices: ['uat', 'stag', 'prod'], description: '注意：选择发布环境', name: 'envList'
+        /*choice choices: ['uat', 'stag', 'prod'], description: '注意：选择发布环境', name: 'envList'
         extendedChoice defaultValue: '192.168.20.158,192.168.20.191',
-                description: '注意：选择发布主机', multiSelectDelimiter: ',',
-                name: 'deployHosts', quoteValue: false, saveJSONParameterToFile: false,
-                type: 'PT_CHECKBOX', value: '192.168.20.158,192.168.20.191', visibleItemCount: 10
+                description: '注意：选择远程发布主机', multiSelectDelimiter: ',',
+                name: 'targetHosts', quoteValue: false, saveJSONParameterToFile: false,
+                type: 'PT_CHECKBOX', value: '192.168.20.158,192.168.20.191,node01,node02', visibleItemCount: 10*/
+        /*extendedChoice defaultValue: 'node01,node02',
+                description: '注意：选择远程发布主机', multiSelectDelimiter: ',',
+                name: 'targetHosts', quoteValue: false, saveJSONParameterToFile: false,
+                type: 'PT_CHECKBOX', value: 'node01,node02', visibleItemCount: 10*/
         choice choices: ['/opt', '/tmp'], description: '注意：选择远程主机的发布目录', name: 'targetDir'
         string defaultValue: '8090', description: '注意：服务监听的端口号', name: 'port'
     }
@@ -67,15 +71,20 @@ pipeline {
             }
         }
 
-        stage("AnsibleDeploy") {
+        stage("Deploy") {
             steps {
                 script {
-                    if (null == "${env.deployHosts}" || "${env.deployHosts}".trim().length() <= 0) {
+                    if (null == "${env.targetHosts}" || "${env.targetHosts}".trim().length() <= 0) {
                         println("The deployment host is not selected.")
                     } else {
-                        ansible.AnsibleDeploy("${env.deployHosts}", "${env.targetDir}",
+                        ansible.AnsibleDeploy("${env.targetHosts}", "${env.targetDir}",
                                 "${env.serviceName}", "${env.releaseVersion}",
                                 "${env.fileName}", "${env.port}")
+
+                        // SaltStack 远程多主机部署（扩展）
+                        /*saltStack.SaltStackDeploy("${env.targetHosts}", "${env.targetDir}",
+                                "${env.serviceName}", "${env.releaseVersion}",
+                                "${env.fileName}", "${env.port}")*/
                     }
                 }
             }
