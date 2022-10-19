@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: __NAMESPACE__
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress
+  namespace: __NAMESPACE__
+spec:
+  rules:
+    - host: __DOMAIN_NAME__
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: __APP_NAME__
+                port:
+                  number: __SERVICE_PORT__
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  labels:
+    k8s-app: __APP_NAME__
+  name: __APP_NAME__
+  namespace: __NAMESPACE__
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: __APP_NAME__
+  template:
+    metadata:
+      labels:
+        k8s-app: __APP_NAME__
+      namespace: __NAMESPACE__
+      name: __APP_NAME__
+    spec:
+      containers:
+        - name: __APP_NAME__
+          image: __IMAGE_NAME__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: __SERVICE_PORT__
+              name: web
+              protocol: TCP
+      serviceAccountName: __APP_NAME__
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-app: __APP_NAME__
+  name: __APP_NAME__
+  namespace: __NAMESPACE__
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    k8s-app: __APP_NAME__
+  name: __APP_NAME__
+  namespace: __NAMESPACE__
+spec:
+  type: ClusterIP
+  ports:
+    - name: web
+      port: __SERVICE_PORT__
+      targetPort: __SERVICE_PORT__
+  selector:
+    k8s-app: __APP_NAME__

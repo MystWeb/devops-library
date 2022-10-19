@@ -14,11 +14,11 @@ package org.devops
  * @param targetHosts 远程发布主机列表
  * @param targetDir 远程发布主机目录
  * @param serviceName 服务/项目名称
- * @param releaseVersion 服务版本号（推荐定义："${branchName}-${commitId}"）
+ * @param version 服务版本号（推荐定义："${branchName}-${commitId}"）
  * @param fileName 文件名称
  * @param port 服务监听的端口号
  */
-def SaltStackDeploy(targetHosts, targetDir, serviceName, releaseVersion, fileName, port) {
+def SaltStackDeploy(targetHosts, targetDir, serviceName, version, fileName, port) {
     // 文件存放目录
     localDeployDir = "/srv/salt/${serviceName}"
 
@@ -50,11 +50,11 @@ def SaltStackDeploy(targetHosts, targetDir, serviceName, releaseVersion, fileNam
 
         # 启动服务
         salt -L "${targetHosts}" cmd.run "cd ${targetDir}/${serviceName} ; source /etc/profile \\
-        && sh service.sh ${serviceName} ${releaseVersion} ${port} start"
+        && sh service.sh ${serviceName} ${version} ${port} start"
 
         # 检查服务
         sleep 5
         salt -L "${targetHosts}" cmd.run "cd ${targetDir}/${serviceName} ; source /etc/profile \\
-        && sh service.sh ${serviceName} ${releaseVersion} ${port} check"
+        && sh service.sh ${serviceName} ${version} ${port} check"
     """
 }

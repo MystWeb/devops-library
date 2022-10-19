@@ -8,11 +8,11 @@ package org.devops
  * @param targetHosts 远程发布主机列表
  * @param targetDir 远程发布主机目录
  * @param serviceName 服务/项目名称
- * @param releaseVersion 服务版本号（推荐定义："${branchName}-${commitId}"）
+ * @param version 服务版本号（推荐定义："${branchName}-${commitId}"）
  * @param fileName 文件名称
  * @param port 服务监听的端口号
  */
-def AnsibleDeploy(targetHosts, targetDir, serviceName, releaseVersion, fileName, port) {
+def AnsibleDeploy(targetHosts, targetDir, serviceName, version, fileName, port) {
     // 删除旧的hosts
     sh "rm -fr hosts"
     // 根据选择的发布主机生成hosts
@@ -28,10 +28,10 @@ def AnsibleDeploy(targetHosts, targetDir, serviceName, releaseVersion, fileName,
 
         # 清理和创建发布目录
         ansible "${targetHosts}" -m shell -a "rm -fr ${targetDir}/${serviceName}/* \\
-            && mkdir -p ${targetDir}/${serviceName} || echo file is exists"
+            && mkdir -p ${targetDir}/${serviceName} || echo file is exists" -i hosts
 
         # 复制应用文件
-        ansible "${targetHosts}" -m copy -a "src=${fileName} dest=${targetDir}/${serviceName}/${fileName}"
+        ansible "${targetHosts}" -m copy -a "src=${fileName} dest=${targetDir}/${serviceName}/${fileName}" -i hosts
     """
 
     // 获取共享库资源文件内容（String字符串） - 发布脚本
@@ -47,11 +47,11 @@ def AnsibleDeploy(targetHosts, targetDir, serviceName, releaseVersion, fileName,
 
         # 启动服务
         ansible "${targetHosts}" -m shell -a "cd ${targetDir}/${serviceName} ; source /etc/profile \\
-        && sh service.sh ${serviceName} ${releaseVersion} ${port} start" -u root
+        && sh service.sh ${serviceName} ${version} ${port} start" -u root
 
         # 检查服务
         sleep 5
         ansible "${targetHosts}" -m shell -a "cd ${targetDir}/${serviceName} ; source /etc/profile \\
-        && sh service.sh ${serviceName} ${releaseVersion} ${port} check" -u root
+        && sh service.sh ${serviceName} ${version} ${port} check" -u root
     """
 }

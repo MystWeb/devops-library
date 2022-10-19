@@ -5,7 +5,7 @@ FROM maven:3.8-jdk-11 as BUILD
 LABEL maintainer="ziming.xing@proaimltd.com"
 
 # Maven Build
-COPY .. /usr/src/app
+COPY . /usr/src/app
 #RUN mvn --batch-mode -f /usr/src/app/pom.xml clean package
 
 # Start with a base image containing Java runtime

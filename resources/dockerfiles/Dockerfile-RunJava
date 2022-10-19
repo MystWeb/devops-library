@@ -1,0 +1,24 @@
+# Start with a base image containing Maven runtime
+FROM openjdk:11-jdk
+
+# Add Maintainer Info
+LABEL maintainer="ziming.xing@proaimltd.com"
+
+ENV PORT 8080
+EXPOSE 8080
+
+# Add arthas
+COPY --from=hengyunabc/arthas:latest /opt/arthas /opt/arthas
+
+# Custom Param
+ARG fileName
+ENV fileName=${fileName}
+ARG filePath
+ENV filePath=${filePath}
+
+# Add the built artifact
+COPY ${filePath}/${fileName} /opt/target/${fileName}
+WORKDIR /opt/target
+
+# Run the jar file
+CMD ["/bin/bash", "-c", "find -type f -name ${fileName} | xargs java -jar"]

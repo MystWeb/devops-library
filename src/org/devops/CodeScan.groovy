@@ -2,18 +2,22 @@ package org.devops
 
 /**
  * 代码扫描-Sonar
+ * @param sonarqubeCredentialsId SonarQube访问凭据Id
+ * @param gitlabUserTokenCredentialsId GitLab用户Token访问凭据Id
  * @param projectVersion 代码扫描-Sonar-项目版本（推荐使用分支名称）
+ * @param commitId 提交Id
+ * @param projectId 项目Id
  * 插件链接：https://github.com/mc1arke/sonarqube-community-branch-plugin、
  * https://github.com/xuhuisheng/sonar-l10n-zh、
  * https://github.com/gabrie-allaigre/sonar-gitlab-plugin
  */
-def CodeScan_Sonar(projectVersion, commitId, projectId) {
+def CodeScan_Sonar(sonarqubeCredentialsId, gitlabUserTokenCredentialsId, projectVersion, commitId, projectId) {
     cliPath = "/data/cicd/sonar-scanner/bin"
-    withCredentials([usernamePassword(credentialsId: '05d7379e-28a6-4dd2-9b35-1f907a1a05c8',
+    withCredentials([usernamePassword(credentialsId: "${sonarqubeCredentialsId}",
             usernameVariable: 'SONAR_USERNAME',
             passwordVariable: 'SONAR_PASSWORD'),
-                     string(credentialsId: '926a978a-5cef-49ca-8ff8-5351ed0700bf',
-                             variable: 'GITLAB_SONAR_TOKEN')]) {
+                     string(credentialsId: "${gitlabUserTokenCredentialsId}",
+                             variable: 'GITLAB_USER_TOKEN')]) {
         // 远程构建时推荐使用CommitID作为代码扫描-项目版本
         sh """
             ${cliPath}/sonar-scanner \
@@ -24,7 +28,7 @@ def CodeScan_Sonar(projectVersion, commitId, projectId) {
             -Dsonar.gitlab.commit_sha=${commitId} \
             -Dsonar.gitlab.ref_name=${projectVersion} \
             -Dsonar.gitlab.project_id=${projectId} \
-            -Dsonar.gitlab.user_token=${GITLAB_SONAR_TOKEN}
+            -Dsonar.gitlab.user_token=${GITLAB_USER_TOKEN}
         """
     }
 }
@@ -107,7 +111,9 @@ def SonarRequest(method, apiUrl) {
     // 通过ApiPost、PostMan等工具的Basic auth认证方式，输入Sonar用户名&密码后，
     // 生成代码-cURL的 --header 'Authorization: Basic *******=' 添加至Jenkins 凭据
     withCredentials([string(credentialsId: "d1ba0306-34e8-4030-a055-bd66d8d4c3a0", variable: 'SONAR_TOKEN')]) {
+        // Sonar接口地址
         sonarApi = "http://192.168.20.194:9000/api"
+
         response = sh returnStdout: true,
                 script: """
                 curl --location \

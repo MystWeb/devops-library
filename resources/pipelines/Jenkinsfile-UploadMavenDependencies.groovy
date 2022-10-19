@@ -118,7 +118,7 @@ pipeline {
                     filePath = "target/${pomData.artifactId}-${pomData.version}.${pomData.packaging}"
 
                     // Artifact Plugin上传制品
-                    artifact.PushArtifactByNexusPlugin(pomData.artifactId, filePath, pomData.packaging,
+                    artifact.PushArtifactByNexusPlugin("192.168.20.194:8081", "55c0f9ca-e3a4-4eee-a59d-14baf5344a28", pomData.artifactId, filePath, pomData.packaging,
                             pomData.groupId, repository, pomData.version)
                 }*/
 
@@ -136,8 +136,8 @@ pipeline {
                     // Maven Cli上传制品（用户信息输入）
                     // target/demo-0.0.1-SNAPSHOT.jar
                     filePath = "target/${env.artifactId}-${env.version}.${env.packaging}"
-                    artifact.PushArtifactByMavenCli(env.artifactId, filePath, env.packaging,
-                            env.groupId, repository, env.version)
+                    artifact.PushArtifactByMavenCli("192.168.20.194:8081", env.artifactId, filePath, env.packaging,
+                            env.groupId, repository, "nexus-local-auth", env.version)
                 }*/
 
                 /**
@@ -151,7 +151,7 @@ pipeline {
                     // target/demo-0.0.1-SNAPSHOT.jar
                     jarName = sh returnStdout: true, script: 'ls target | grep -E "jar\$"'
                     filePath = "target/" + jarName - "\n"
-                    artifact.PushArtifactByMavenCliAndPom(filePath, repository)
+                    artifact.PushArtifactByMavenCliAndPom("192.168.20.194:8081", filePath, repository, "nexus-local-auth")
                 }
             }
         }

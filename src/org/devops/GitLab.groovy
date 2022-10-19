@@ -28,12 +28,14 @@ def GetShortCommitIdByEightDigit() {
 
 /**
  * 通过Api获取Commit简短id
+ * @param credentialsId GitLab用户Token访问凭据Id
  * @param projectId 项目id
  * @param branchName 分支名称
  */
-def GetShortCommitIdByApi(projectId, branchName) {
+def GetShortCommitIdByApi(credentialsId, projectId, branchName) {
     apiUrl = "projects/${projectId}/repository/branches/${branchName}"
-    response = GitLabRequest("GET", apiUrl)
+    response = GitLabRequest("${credentialsId}", "GET", "${apiUrl}")
+    response = readJSON text: response - "\n"
     return response.commit.short_id - "\n"
 }
 
@@ -41,17 +43,19 @@ def GetShortCommitIdByApi(projectId, branchName) {
  * 获取ProjectId
  * git fork：user-a/devops-service-app -> user-b/devops-service-app
  *
+ * @param credentialsId GitLab用户Token访问凭据Id
  * @param groupName 组名称/命名空间
  * @param projectName 项目名称
  * @param token GitLab-Sonar-Token
  */
-def GetProjectId(groupName, projectName) {
-    withCredentials([string(credentialsId: '926a978a-5cef-49ca-8ff8-5351ed0700bf', variable: 'GITLAB_SONAR_TOKEN')]) {
+def GetProjectId(credentialsId, groupName, projectName) {
+    withCredentials([string(credentialsId: "${credentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
         apiUrl = "projects?search=${projectName}"
-        response = GitLabRequest("GET", apiUrl)
+        response = GitLabRequest("${credentialsId}", "GET", "${apiUrl}")
+        response = readJSON text: response - "\n"
         if (response != []) {
             for (r in response) {
-                if (r["namespace"]["name"] == groupName) {
+                if (r["namespace"]["name"] == "${groupName}") {
                     return response[0]["id"]
                 }
             }
@@ -62,18 +66,90 @@ def GetProjectId(groupName, projectName) {
 
 /**
  * GitLabRestApi GitLab请求
+ * @param credentialsId GitLab用户Token访问凭据Id
  * @param method 请求方法
  * @param apiUrl API URL
  */
-def GitLabRequest(method, apiUrl) {
-    withCredentials([string(credentialsId: '926a978a-5cef-49ca-8ff8-5351ed0700bf', variable: 'GITLAB_SONAR_TOKEN')]) {
+def GitLabRequest(credentialsId, method, apiUrl) {
+    withCredentials([string(credentialsId: "${credentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
+        // GitLab仓库地址
+        registry = "http://192.168.20.194"
+
         response = sh returnStdout: true,
                 script: """
                 curl --location --request ${method} \
-                http://192.168.20.194/api/v4/${apiUrl} \
-                --header "PRIVATE-TOKEN: ${GITLAB_SONAR_TOKEN}"
+                ${registry}/api/v4/${apiUrl} \
+                --header "PRIVATE-TOKEN: ${GITLAB_USER_TOKEN}"
             """
-        response = readJSON text: response - "\n"
+
         return response
     }
+}
+
+/**
+ * 获取存储库文件
+ * GET /projects/:id/repository/files/:file_path/raw
+ * @param credentialsId GitLab用户Token访问凭据Id
+ * @param projectId 项目Id
+ * @param filePath 文件路径
+ * @param branchName 分支名称
+ */
+def GetRepositoryFile(credentialsId, projectId, filePath, branchName) {
+    apiUrl = "/projects/${projectId}/repository/files/${filePath}/raw?ref=${branchName}"
+    response = GitLabRequest("${credentialsId}", 'GET', "${apiUrl}")
+    return response
+}
+
+/**
+ * GitLabApi HTTP/HTTPS 请求
+ * 插件链接：https://plugins.jenkins.io/http_request
+ * @param credentialsId GitLab用户Token访问凭据Id
+ * @param method 请求方法
+ * @param apiUrl 请求地址
+ * @param requestBody 请求体
+ */
+def GitLabHttpRequest(credentialsId, method, apiUrl, requestBody) {
+    // GitLab接口地址
+    def gitServer = "http://192.168.20.194/api/v4"
+    withCredentials([string(credentialsId: "${credentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
+        response = httpRequest acceptType: 'APPLICATION_JSON_UTF8',
+                consoleLogResponseBody: true,
+                contentType: 'APPLICATION_JSON_UTF8',
+                customHeaders: [[maskValue: false, name: 'PRIVATE-TOKEN', value: "${GITLAB_USER_TOKEN}"]],
+                httpMode: "${method}",
+                url: "${gitServer}/${apiUrl}",
+                wrapAsMultipart: false,
+                requestBody: "${requestBody}"
+    }
+    return response
+}
+
+/**
+ * 创建文件
+ * @param credentialsId GitLab用户Token访问凭据Id
+ * @param projectId 项目Id
+ * @param branchName 分支名称
+ * @param filePath 文件路径
+ * @param fileContent 文件内容
+ */
+def CreateRepositoryFile(credentialsId, projectId, branchName, filePath, fileContent) {
+    apiUrl = "projects/${projectId}/repository/files/${filePath}"
+    requestBody = """{"branch": "${branchName}", "encoding":"base64", "content": "${fileContent}", "commit_message": "update a new file"}"""
+    response = GitLabHttpRequest("${credentialsId}", 'POST', "${apiUrl}", "${requestBody}")
+    println(response)
+}
+
+/**
+ * 更新文件
+ * @param credentialsId GitLab用户Token访问凭据Id
+ * @param projectId 项目Id
+ * @param branchName 分支名称
+ * @param filePath 文件路径
+ * @param fileContent 文件内容
+ */
+def UpdateRepositoryFile(credentialsId, projectId, branchName, filePath, fileContent) {
+    apiUrl = "projects/${projectId}/repository/files/${filePath}"
+    requestBody = """{"branch": "${branchName}", "encoding":"base64", "content": "${fileContent}", "commit_message": "update a new file"}"""
+    response = GitLabHttpRequest("${credentialsId}", 'PUT', "${apiUrl}", "${requestBody}")
+    println(response)
 }

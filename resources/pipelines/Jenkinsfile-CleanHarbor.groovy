@@ -21,7 +21,7 @@ pipeline {
                 script {
                     // Harbor项目名称/GitLab组名称
                     env.projectName = "${env.repoName}".split("-")[0]
-                    env.result = harbor.GetArtifactTag("${env.projectName}", "${env.repoName}")
+                    env.result = harbor.GetArtifactTag("192.168.20.194:8088", "ef5a1de1-0840-4b51-a0b0-dc04f98544f3", "${env.projectName}", "${env.repoName}")
                     env.result = env.result - '[' - ']'
                 }
             }
@@ -46,7 +46,7 @@ pipeline {
 
                     for (t in result.split(',')) {
                         println("Delete >>>>" + t.trim())
-                        harbor.DeleteArtifactTag(env.projectName, env.repoName, t.trim())
+                        harbor.DeleteArtifactTag("192.168.20.194:8088", "ef5a1de1-0840-4b51-a0b0-dc04f98544f3", env.projectName, env.repoName, t.trim())
                     }
                 }
             }
