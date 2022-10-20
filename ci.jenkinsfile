@@ -14,6 +14,7 @@ def codeScan = new CodeScan()
 def gitlab = new GitLab()
 def artifact = new Artifact()
 def docker = new Docker()
+def kubernetes = new Kubernetes()
 
 // 流水线
 pipeline {
@@ -31,8 +32,6 @@ pipeline {
         choice choices: ['maven', 'custom', 'mavenSkip', 'gradle', 'ant', 'go', 'npm', 'yarn'], description: '构建类型', name: 'buildType'
         string defaultValue: '', name: 'customBuild', description: '自定义构建命令（示例：mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests && mvn test）'
         choice choices: ['false', 'true'], description: '是否跳过代码扫描', name: 'skipSonar'
-        choice choices: ['devops.maven.service.com', 'devops.ui.service.com'], description: '服务访问的域名', name: 'domainName'
-        string defaultValue: '8080', description: '服务监听的端口号', name: 'port'
     }
 
     stages {
@@ -161,36 +160,22 @@ pipeline {
                 script {
                     // Git项目Id（devops-k8s-deployment）
                     k8sProjectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "devops", "devops-k8s-deployment")
-                    // 下载模板文件
-                    fileData = gitlab.GetRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "deployments.yaml", "main")
-//                    println("fileDada：${fileData}")
-                    sh "rm -fr deployments.yaml"
-                    writeFile file: 'deployments.yaml', text: "${fileData}"
-
-                    // 替换模板文件内容
-                    namespace = "${env.buName}"
-                    appName = "${env.serviceName}"
-                    sh """
-                        sed -i 's#__DOMAIN_NAME__#${env.domainName}#g' deployments.yaml
-                        sed -i 's#__SERVICE_PORT__#${env.port}#g' deployments.yaml
-                        sed -i 's#__APP_NAME__#${appName}#g' deployments.yaml
-                        sed -i 's#__NAMESPACE__#${namespace}#g' deployments.yaml
-                        sed -i 's#__IMAGE_NAME__#${env.imageName}#g' deployments.yaml
-                        echo "替换后的文件打印"
-                        #cat deployments.yaml
-                    """
+                    // Git上传文件路径：项目服务名称/版本号.yaml
+                    filePath = "${env.serviceName}%2f${env.version}.yaml"
+                    // 下载Kubernetes部署模板文件
+                    fileData = gitlab.GetRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}",
+                            "deployments.yaml", "main")
+                    // imagePath：镜像仓库地址/镜像名称:镜像标签
+                    imagePath = "${env.imageRegistry}/${env.imageName}:${env.version}"
+                    // Kubernetes发布模板文件内容替换并转换Base64
+                    base64Content = kubernetes.K8sReleaseTemplateFileReplaceAndConvertToBase64("deployments.yaml", "${fileData}", "${imagePath}")
 
                     // 上传替换后的版本文件（新建文件或者更新文件）
-                    newYaml = sh returnStdout: true, script: 'cat deployments.yaml'
-                    //println(newYaml)
-                    // 转换文件内容编码格式：Base64
-                    base64Content = "${newYaml}".bytes.encodeBase64().toString()
-
-                    // 更新gitlab文件内容（URL编码转义符： %2f = / ）
+                    // gitlab文件内容变更（URL编码转义符： %2f = / ）
                     try {
-                        gitlab.CreateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "main", "${appName}%2f${env.version}.yaml", base64Content)
+                        gitlab.CreateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "main", "${filePath}", "${base64Content}")
                     } catch (e) {
-                        gitlab.UpdateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "main", "${appName}%2f${env.version}.yaml", base64Content)
+                        gitlab.UpdateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "main", "${filePath}", "${base64Content}")
                     }
                 }
             }

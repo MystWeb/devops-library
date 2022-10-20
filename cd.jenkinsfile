@@ -2,17 +2,12 @@
 @Library("mylib@main") _
 
 // 导入库
-import org.devops.Ansible
-import org.devops.Artifact
 import org.devops.GitLab
-import org.devops.SaltStack
+import org.devops.Kubernetes
 
 // New实例化
 def gitlab = new GitLab()
-def artifact = new Artifact()
-def ansible = new Ansible()
-def saltStack = new SaltStack()
-
+def kubernetes = new Kubernetes()
 pipeline {
     agent {
         label "build"
@@ -25,17 +20,7 @@ pipeline {
 
     parameters {
         string defaultValue: 'RELEASE-1.1.1', description: '注意：选择发布分支', name: 'branchName'
-        choice choices: ['jar', 'war', 'html', 'go', 'py'], description: '注意：选择制品类型', name: 'artifactType'
-        /*choice choices: ['uat', 'stag', 'prod'], description: '注意：选择发布环境', name: 'envList'
-        extendedChoice defaultValue: '192.168.20.158,192.168.20.191',
-                description: '注意：选择远程发布主机', multiSelectDelimiter: ',',
-                name: 'targetHosts', quoteValue: false, saveJSONParameterToFile: false,
-                type: 'PT_CHECKBOX', value: '192.168.20.158,192.168.20.191,node01,node02', visibleItemCount: 10*/
-        /*extendedChoice defaultValue: 'node01,node02',
-                description: '注意：选择远程发布主机', multiSelectDelimiter: ',',
-                name: 'targetHosts', quoteValue: false, saveJSONParameterToFile: false,
-                type: 'PT_CHECKBOX', value: 'node01,node02', visibleItemCount: 10*/
-        choice choices: ['/opt', '/tmp'], description: '注意：选择远程主机的发布目录', name: 'targetDir'
+        choice choices: ['devops.maven.service', 'devops.ui.service'], description: '服务访问的域名', name: 'domainName'
         string defaultValue: '8090', description: '注意：服务监听的端口号', name: 'port'
     }
 
@@ -58,55 +43,74 @@ pipeline {
                     // 服务版本号（推荐定义："${branchName}-${commitId}"）
                     env.version = "${env.branchName}-${env.commitId}"
 
-                    // 文件路径
-                    env.filePath = "${env.buName}/${env.serviceName}/${env.version}"
-                    // 文件名称
-                    env.fileName = "${env.serviceName}-${env.version}.${env.artifactType}"
-
-                    // 制品仓库地址
-                    env.artifactRegistry = "192.168.20.194:8081"
-                    // 制品仓库访问凭据Id
-                    env.artifactCredentialsId = "0cbf60e3-319d-464a-8efe-cf83ebeb97ff"
-                    // 制品仓库名称
-                    env.artifactRepository = "devops-local"
-                    // 镜像仓库地址
-                    env.imageRegistry = "192.168.20.194:8088"
-
                     // 修改Jenkins构建描述
-                    currentBuild.description = """ branchName：${env.branchName} \n commitId：${env.commitId} """
+                    currentBuild.description = """ branchName：${env.branchName} \n commitId：${env.commitId} \n namespace：${env.buName} \n """
                     // 修改Jenkins构建名称
                     currentBuild.displayName = "${env.version}"
                 }
             }
         }
 
-        stage("PullArtifact") {
+        stage("K8sReleaseFile") {
             steps {
                 script {
-                    artifact.PullArtifactByApi("${env.artifactRegistry}", "${env.artifactCredentialsId}", "${env.artifactRepository}",
-                            "${env.filePath}", "${env.fileName}")
+                    // Git项目Id（devops-k8s-deployment）
+                    k8sProjectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "devops", "devops-k8s-deployment")
+                    // 下载Kubernetes部署文件
+                    env.deployFileName = "${env.version}.yaml"
+                    // 文件路径：项目服务名称/版本号.yaml
+                    filePath = "${env.serviceName}%2f${env.deployFileName}"
+                    // 下载Kubernetes部署模板文件
+                    fileData = gitlab.GetRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "${filePath}", "main")
+                    kubernetes.K8sReleaseTemplateFileReplace("${env.deployFileName}", "${fileData}", "${env.domainName}",
+                            "${env.port}", "${env.serviceName}", "${env.buName}")
                 }
             }
         }
 
-        stage("Deploy") {
+        /*stage("K8sDeploy") {
             steps {
                 script {
-                    if (null == "${env.targetHosts}" || "${env.targetHosts}".trim().length() <= 0) {
-                        println("The deployment host is not selected.")
-                    } else {
-                        ansible.AnsibleDeploy("${env.targetHosts}", "${env.targetDir}",
-                                "${env.serviceName}", "${env.version}",
-                                "${env.fileName}", "${env.port}")
+                    kubernetes.KubernetesDeploy("${env.buName}", "${env.deployFileName}", "${env.serviceName}")
+                }
+            }
+        }
 
-                        // SaltStack 远程多主机部署（扩展）
-                        /*saltStack.SaltStackDeploy("${env.targetHosts}", "${env.targetDir}",
-                                "${env.serviceName}", "${env.version}",
-                                "${env.fileName}", "${env.port}")*/
+        stage("HealthCheck") {
+            steps {
+                script {
+                    // 注意：自定义域名需配置Hosts文件！
+                    result = sh returnStdout: true, script: """ curl "http://${env.domainName}/health" """ - "\n"
+                    if ("ok" == result) {
+                        println("Successful！")
+                    }
+                }
+            }
+        }*/
+
+        stage("RollOut") {
+            input {
+                message "是否进行回滚"
+                ok "提交"
+                submitter "admin,myst"
+                parameters {
+                    choice(choices: ['no', 'yes'], name: 'opts')
+                }
+            }
+
+            steps {
+                script {
+                    switch ("${opts}") {
+                        case "yes":
+                            sh "kubectl rollout undo deployment/${env.serviceName} -n ${env.buName}"
+                            break
+                        case "no":
+                            break
                     }
                 }
             }
         }
+
     }
 
     post {

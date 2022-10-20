@@ -125,7 +125,7 @@ def GitLabHttpRequest(credentialsId, method, apiUrl, requestBody) {
 }
 
 /**
- * 创建文件
+ * 创建存储库文件
  * @param credentialsId GitLab用户Token访问凭据Id
  * @param projectId 项目Id
  * @param branchName 分支名称
@@ -140,7 +140,7 @@ def CreateRepositoryFile(credentialsId, projectId, branchName, filePath, fileCon
 }
 
 /**
- * 更新文件
+ * 更新存储库文件
  * @param credentialsId GitLab用户Token访问凭据Id
  * @param projectId 项目Id
  * @param branchName 分支名称
