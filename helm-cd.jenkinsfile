@@ -2,10 +2,13 @@
 @Library("mylib@main") _
 
 // 导入库
+
+import org.devops.Checkout
 import org.devops.GitLab
 import org.devops.Kubernetes
 
 // New实例化
+def checkout = new Checkout()
 def gitlab = new GitLab()
 def kubernetes = new Kubernetes()
 pipeline {
@@ -19,7 +22,10 @@ pipeline {
     }
 
     parameters {
-        string defaultValue: 'RELEASE-1.1.1', description: '注意：选择发布分支', name: 'branchName'
+        string defaultValue: 'RELEASE-1.1.1', description: '注意：选择应用发布分支', name: 'branchName'
+        string defaultValue: 'f0b54c03-789d-4ca4-847d-29f83236ef8a', description: '访问凭据-GitLab', name: 'credentialsId'
+        string defaultValue: 'http://192.168.20.194/devops/devops-k8s-deployment.git', description: '注意：Helm Chart仓库地址', name: 'helmSrcUrl'
+        string defaultValue: 'main', description: '注意：Helm Chart分支名称', name: 'helmBranchName'
         choice choices: ['devops.maven.service', 'devops.ui.service'], description: '服务访问的域名', name: 'domainName'
         string defaultValue: '8080', description: '注意：服务监听的端口号', name: 'port'
     }
@@ -51,32 +57,39 @@ pipeline {
             }
         }
 
-        stage("K8sReleaseFile") {
+        stage("Checkout") {
             steps {
                 script {
-                    // Git项目Id（devops-k8s-deployment）
-                    k8sProjectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "devops", "devops-k8s-deployment")
-                    // 下载Kubernetes部署文件
-                    env.deployFileName = "${env.version}.yaml"
-                    // 文件路径：项目服务名称/版本号.yaml
-                    filePath = "${env.serviceName}%2f${env.deployFileName}"
-                    // 下载Kubernetes部署模板文件
-                    fileData = gitlab.GetRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "${filePath}", "main")
-                    kubernetes.K8sReleaseTemplateFileReplace("${env.deployFileName}", "${fileData}", "${env.domainName}",
-                            "${env.port}", "${env.serviceName}", "${env.buName}")
+                    sh "[ -d ${env.serviceName} ] || mkdir ${env.serviceName}"
+                    ws("${WORKSPACE}/${env.serviceName}") {
+                        checkout.GetCode("${env.helmSrcUrl}", "${env.helmBranchName}", "${env.credentialsId}")
+                    }
                 }
             }
         }
 
-        stage("K8sDeploy") {
+        stage("HelmReleaseFile") {
             steps {
                 script {
-                    kubernetes.KubernetesDeploy("${env.buName}", "${env.deployFileName}", "${env.serviceName}")
+                    // Git文件模板名称
+                    fileName = "values.yaml"
+                    // Git模板文件路径：项目服务名称_Helm/values.yaml
+                    filePath = "${env.serviceName}/${env.serviceName}_Helm/${fileName}"
+                    // Kubernetes发布模板文件内容替换
+                    kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.port}")
                 }
             }
         }
 
-        /*stage("HealthCheck") {
+        stage("HelmDeploy") {
+            steps {
+                script {
+                    kubernetes.HelmDeploy("${env.buName}", "${env.serviceName}/${env.serviceName}_Helm", "${env.serviceName}")
+                }
+            }
+        }
+
+        stage("HealthCheck") {
             steps {
                 script {
                     // 注意：自定义域名需配置Hosts文件！
@@ -86,7 +99,7 @@ pipeline {
                     }
                 }
             }
-        }*/
+        }
 
         stage("RollOut") {
             input {
@@ -102,7 +115,11 @@ pipeline {
                 script {
                     switch ("${opts}") {
                         case "yes":
-                            sh "kubectl rollout undo deployment/${env.serviceName} -n ${env.buName}"
+                            // 注意：声明式：input {} 中 choices 无法获取变量值，所以此处改为脚本式
+                            def result = input message: "选择回滚版本?",
+                                    parameters: [choice(choices: "${env.REVISION}", name: 'revision')]
+                            println("选择回滚版本：${result}")
+                            sh "helm rollback ${env.serviceName} ${result} -n ${env.buName}"
                             break
                         case "no":
                             break
