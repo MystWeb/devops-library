@@ -24,3 +24,9 @@ bin/
 .classpath
 .project
 .jqwik-database
+
+### Terraform ###
+**/.terraform/*
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
