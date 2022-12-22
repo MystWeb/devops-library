@@ -1,33 +1,27 @@
-# initial password：docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password
+# First execution：mkdir -p /data/nexus/data && chmod 777 -R /data/nexus
+# initial password：docker exec -it nexus tail /nexus-data/admin.password
 
 # Pull image
-resource "docker_image" "gitlab" {
+resource "docker_image" "nexus" {
   # (String) The name of the Docker image, including any tags or SHA256 repo digests.
-  name         = "gitlab/gitlab-ce:15.6.2-ce.0"
+  name         = "sonatype/nexus3:3.44.0"
   # (Boolean) If true, then the Docker image won't be deleted on destroy operation.
   # If this is false, it will delete the image from the docker local storage on destroy operation.
   keep_locally = true
 }
 
 locals {
-  container_name        = "gitlab"
-  container_image       = docker_image.gitlab.name
+  container_name        = "nexus"
+  container_image       = docker_image.nexus.name
   container_memory      = 12288
   container_memory_swap = 15360
+  container_privileged  = true
   container_network     = data.terraform_remote_state.network.outputs.network[0]["name"]
-  container_ip          = "172.18.0.2"
+  container_ip          = "172.18.0.4"
   container_ports       = [
     {
-      internal = 80
-      external = 50080
-    },
-    {
-      internal = 443
-      external = 50443
-    },
-    {
-      internal = 22
-      external = 50022
+      internal = 8081
+      external = 8081
     }
   ]
   container_volumes = [
@@ -36,26 +30,19 @@ locals {
       container_path = "/etc/localtime"
     },
     {
-      host_path      = "/data/gitlab/config"
-      container_path = "/etc/gitlab"
-    },
-    {
-      host_path      = "/data/gitlab/logs"
-      container_path = "/var/log/gitlab"
-    },
-    {
-      host_path      = "/data/gitlab/data"
-      container_path = "/var/opt/gitlab"
+      host_path      = "/data/nexus/data"
+      container_path = "/nexus-data"
     }
   ]
 }
 
 # Start a container
-resource "docker_container" "gitlab" {
+resource "docker_container" "nexus" {
   name            = local.container_name
   image           = local.container_image
   memory          = local.container_memory
   memory_swap     = local.container_memory_swap
+  privileged      = local.container_privileged
   max_retry_count = 3
   restart         = "on-failure"
   networks_advanced {

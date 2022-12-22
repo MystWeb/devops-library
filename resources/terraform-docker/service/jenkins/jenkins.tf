@@ -1,4 +1,4 @@
-# Jenkins initial password：docker exec -it jenkins tail /var/jenkins_home/secrets/initialAdminPassword
+# initial password：docker exec -it jenkins tail /var/jenkins_home/secrets/initialAdminPassword
 
 # Pull image
 resource "docker_image" "jenkins" {
@@ -21,7 +21,7 @@ locals {
     #    "JAVA_OPTS=-Duser.timezone='Asia/Shanghai'",
   ]
   container_network = data.terraform_remote_state.network.outputs.network[0]["name"]
-  container_ip      = "172.18.0.2"
+  container_ip      = "172.18.0.3"
   container_ports   = [
     {
       internal = 8080
@@ -40,7 +40,7 @@ locals {
     {
       host_path      = "/data/jenkins_home"
       container_path = "/var/jenkins_home"
-    },
+    }
   ]
 }
 

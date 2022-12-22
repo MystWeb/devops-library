@@ -23,7 +23,7 @@ locals {
     "POSTGRES_PASSWORD=proaim@2013"
   ]
   container_network = data.terraform_remote_state.network.outputs.network[0]["name"]
-  container_ip      = "172.18.0.4"
+  container_ip      = "172.18.0.5"
   container_ports   = [
     {
       internal = 5432
@@ -38,7 +38,7 @@ locals {
     {
       host_path      = "/data/postgresql/data"
       container_path = "/var/lib/postgresql/data"
-    },
+    }
   ]
 }
 
