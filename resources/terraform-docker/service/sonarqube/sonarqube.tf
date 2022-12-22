@@ -1,3 +1,7 @@
+###SonarQube使用了ES，需要修改一些内核参数：
+# cp -p /etc/sysctl.conf /etc/sysctl.conf.bak$(date '+%Y%m%d%H%M%S')
+# echo "vm.max_map_count = 262144" >> /etc/sysctl.conf && sysctl -w vm.max_map_count=262144
+
 # default username：admin，default password：admin
 # 推荐安装汉化插件：[编程爱好者/sonar-l10n-zh](https://github.com/SonarQubeCommunity/sonar-l10n-zh/releases/latest)
 # 插件目录：/opt/sonarqube/extensions/plugins，通过Web界面安装汉化插件：Administration|Marketplace|Plugins|Chinese Pack
