@@ -7,7 +7,7 @@ provider "docker" {
 # Data Source：https://developer.hashicorp.com/terraform/language/data-sources
 data "terraform_remote_state" "network" {
   backend = "local"
-  config = {
+  config  = {
     path = "../../network/terraform.tfstate"
   }
 }

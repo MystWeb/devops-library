@@ -11,3 +11,10 @@ data "terraform_remote_state" "network" {
     path = "../../network/terraform.tfstate"
   }
 }
+
+data "terraform_remote_state" "postgresql" {
+  backend = "local"
+  config  = {
+    path = "../postgresql/terraform.tfstate"
+  }
+}

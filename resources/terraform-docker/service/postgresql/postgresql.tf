@@ -1,35 +1,33 @@
-# Jenkins initial password：docker exec -it jenkins tail /var/jenkins_home/secrets/initialAdminPassword
+### 创建一个sonar用户与数据库
+# docker exec -it postgresql bash
+# psql -U postgres -d postgres -h 127.0.0.1 -p 5432
+# create user sonar with password 'sonar';
+# create database sonar owner sonar;
+# grant all privileges on database sonar to sonar;
 
 # Pull image
-resource "docker_image" "jenkins" {
+resource "docker_image" "postgresql" {
   # (String) The name of the Docker image, including any tags or SHA256 repo digests.
-  name         = "jenkins/jenkins:2.375.1-lts-jdk11"
+  name         = "postgres:15.1"
   # (Boolean) If true, then the Docker image won't be deleted on destroy operation.
   # If this is false, it will delete the image from the docker local storage on destroy operation.
   keep_locally = true
 }
 
 locals {
-  container_name        = "jenkins"
-  container_image       = docker_image.jenkins.name
+  container_name        = "postgresql"
+  container_image       = docker_image.postgresql.name
   container_memory      = 12288
   container_memory_swap = 15360
-  container_user        = "root"
-  container_privileged  = true
   container_env         = [
-    "JAVA_OPTS=-Dorg.apache.commons.jelly.tags.fmt.timeZone='Asia/Shanghai'",
-    #    "JAVA_OPTS=-Duser.timezone='Asia/Shanghai'",
+    "POSTGRES_PASSWORD=proaim@2013"
   ]
   container_network = data.terraform_remote_state.network.outputs.network[0]["name"]
-  container_ip      = "172.18.0.2"
+  container_ip      = "172.18.0.4"
   container_ports   = [
     {
-      internal = 8080
-      external = 8080
-    },
-    {
-      internal = 50000
-      external = 50000
+      internal = 5432
+      external = 5432
     }
   ]
   container_volumes = [
@@ -38,20 +36,18 @@ locals {
       container_path = "/etc/localtime"
     },
     {
-      host_path      = "/data/jenkins_home"
-      container_path = "/var/jenkins_home"
+      host_path      = "/data/postgresql/data"
+      container_path = "/var/lib/postgresql/data"
     },
   ]
 }
 
 # Start a container
-resource "docker_container" "jenkins" {
+resource "docker_container" "postgresql" {
   name            = local.container_name
   image           = local.container_image
   memory          = local.container_memory
   memory_swap     = local.container_memory_swap
-  user            = local.container_user
-  privileged      = local.container_privileged
   env             = local.container_env
   max_retry_count = 3
   restart         = "on-failure"
