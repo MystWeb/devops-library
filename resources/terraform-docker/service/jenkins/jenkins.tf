@@ -1,4 +1,12 @@
 # initial password：docker exec -it jenkins tail /var/jenkins_home/secrets/initialAdminPassword
+# 中文插件：https://plugins.jenkins.io/locale
+# RBAC权限管理插件：https://plugins.jenkins.io/role-strategy，配置：全局安全配置|授权策略|Role-Based Strategy
+# Jenkins备份插件：https://plugins.jenkins.io/thinBackup/
+# Jenkins UI插件：https://plugins.jenkins.io/blueocean/
+# 通用WebHook触发器插件：https://plugins.jenkins.io/generic-webhook-trigger/
+# Jenkins任务重建插件：https://plugins.jenkins.io/rebuild/
+# Jenkins邮件插件：https://plugins.jenkins.io/email-ext/
+# Pipeline工具箱：https://plugins.jenkins.io/pipeline-utility-steps/
 
 # Pull image
 resource "docker_image" "jenkins" {
