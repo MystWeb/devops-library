@@ -2,7 +2,7 @@ package org.devops
 
 /**
  * 代码扫描-Sonar
- * @param sonarqubeCredentialsId SonarQube访问凭据Id
+ * @param sonarqubeUserTokenCredentialsId SonarQube访问凭据Id
  * @param gitlabUserTokenCredentialsId GitLab用户Token访问凭据Id
  * @param projectVersion 代码扫描-Sonar-项目版本（推荐使用分支名称）
  * @param commitId 提交Id
@@ -11,18 +11,14 @@ package org.devops
  * https://github.com/xuhuisheng/sonar-l10n-zh、
  * https://github.com/gabrie-allaigre/sonar-gitlab-plugin
  */
-def CodeScan_Sonar(sonarqubeCredentialsId, gitlabUserTokenCredentialsId, projectVersion, commitId, projectId) {
-    cliPath = "/data/cicd/sonar-scanner/bin"
-    withCredentials([usernamePassword(credentialsId: "${sonarqubeCredentialsId}",
-            usernameVariable: 'SONAR_USERNAME',
-            passwordVariable: 'SONAR_PASSWORD'),
-                     string(credentialsId: "${gitlabUserTokenCredentialsId}",
-                             variable: 'GITLAB_USER_TOKEN')]) {
+def CodeScan_Sonar(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId, projectVersion, commitId, projectId) {
+    cliPath = "/opt/sonar-scanner/bin"
+    withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
+                     string(credentialsId: "${gitlabUserTokenCredentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
         // 远程构建时推荐使用CommitID作为代码扫描-项目版本
         sh """
             ${cliPath}/sonar-scanner \
-            -Dsonar.login=${SONAR_USERNAME} \
-            -Dsonar.password=${SONAR_PASSWORD} \
+            -Dsonar.login=${SONARQUBE_USER_TOKEN} \
             -Dsonar.projectVersion=${projectVersion} \
             -Dsonar.branch.name=${projectVersion} \
             -Dsonar.gitlab.commit_sha=${commitId} \
@@ -110,9 +106,9 @@ def ProjectSearch(projectName) {
 def SonarRequest(method, apiUrl) {
     // 通过ApiPost、PostMan等工具的Basic auth认证方式，输入Sonar用户名&密码后，
     // 生成代码-cURL的 --header 'Authorization: Basic *******=' 添加至Jenkins 凭据
-    withCredentials([string(credentialsId: "d1ba0306-34e8-4030-a055-bd66d8d4c3a0", variable: 'SONAR_TOKEN')]) {
+    withCredentials([string(credentialsId: "f7acd2a7-576e-4908-9e80-ceab6525cc50", variable: 'SONAR_TOKEN')]) {
         // Sonar接口地址
-        sonarApi = "http://192.168.20.194:9000/api"
+        sonarApi = "http://192.168.100.150:9000/sonarqube/api"
 
         response = sh returnStdout: true,
                 script: """

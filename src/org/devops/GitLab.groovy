@@ -73,7 +73,7 @@ def GetProjectId(credentialsId, groupName, projectName) {
 def GitLabRequest(credentialsId, method, apiUrl) {
     withCredentials([string(credentialsId: "${credentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
         // GitLab仓库地址
-        registry = "http://192.168.20.194"
+        registry = "http://192.168.100.150"
 
         response = sh returnStdout: true,
                 script: """
@@ -110,7 +110,7 @@ def GetRepositoryFile(credentialsId, projectId, filePath, branchName) {
  */
 def GitLabHttpRequest(credentialsId, method, apiUrl, requestBody) {
     // GitLab接口地址
-    def gitServer = "http://192.168.20.194/api/v4"
+    def gitServer = "http://192.168.100.150/api/v4"
     withCredentials([string(credentialsId: "${credentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
         response = httpRequest acceptType: 'APPLICATION_JSON_UTF8',
                 consoleLogResponseBody: true,

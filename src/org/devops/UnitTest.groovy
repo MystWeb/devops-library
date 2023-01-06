@@ -53,6 +53,9 @@ def CodeTest(buildTool) {
         case "npm":
             NpmTest()
             break;
+        case "npmSkip":
+            println("npm Skip the unit tests")
+            break;
         case "yarn":
             YarnTest()
             break;

@@ -1,24 +1,29 @@
 # Start with a base image containing Maven runtime
-FROM openjdk:11-jdk
+FROM openjdk:11-jdk-slim
 
 # Add Maintainer Info
 LABEL maintainer="ziming.xing@proaimltd.com"
-
-ENV PORT 8080
-EXPOSE 8080
 
 # Add arthas
 COPY --from=hengyunabc/arthas:latest /opt/arthas /opt/arthas
 
 # Custom Param
+ENV JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom \
+  -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 \
+  -XX:+PrintFlagsFinal -XX:+UnlockExperimentalVMOptions  \
+  -Xms1024m -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m "
 ARG fileName
 ENV fileName=${fileName}
 ARG filePath
 ENV filePath=${filePath}
+ENV PARAMS=""
 
 # Add the built artifact
 COPY ${filePath}/${fileName} /opt/target/${fileName}
 WORKDIR /opt/target
 
+RUN echo "fileName：${fileName}，filePath：${filePath}，PARAMS：${PARAMS}"
+
 # Run the jar file
-CMD ["/bin/bash", "-c", "find -type f -name ${fileName} | xargs java -jar"]
+#CMD ["/bin/bash", "-c", "find -type f -name ${fileName} | xargs java -jar ${JAVA_OPTS}"]
+CMD ["/bin/bash", "-c", "java -jar ${JAVA_OPTS} ${fileName} ${PARAMS}"]

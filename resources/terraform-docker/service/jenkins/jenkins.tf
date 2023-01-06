@@ -7,6 +7,7 @@
 # Jenkins任务重建插件：https://plugins.jenkins.io/rebuild/
 # Jenkins邮件插件：https://plugins.jenkins.io/email-ext/
 # Pipeline工具箱：https://plugins.jenkins.io/pipeline-utility-steps/
+# HttpRequest：https://plugins.jenkins.io/http_request
 
 # Pull image
 resource "docker_image" "jenkins" {

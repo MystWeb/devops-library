@@ -59,7 +59,7 @@ pipeline {
                     // 下载Kubernetes部署文件
                     env.deployFileName = "${env.version}.yaml"
                     // 文件路径：项目服务名称/版本号.yaml
-                    filePath = "${env.serviceName}%2f${env.deployFileName}"
+                    filePath = "${env.serviceName}%2fNative%2f${env.version}.yaml"
                     // 下载Kubernetes部署模板文件
                     fileData = gitlab.GetRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "${filePath}", "main")
                     kubernetes.K8sReleaseTemplateFileReplace("${env.deployFileName}", "${fileData}", "${env.domainName}",

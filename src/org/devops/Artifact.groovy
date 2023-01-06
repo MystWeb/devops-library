@@ -6,10 +6,30 @@ package org.devops
  * @param credentialsId 访问凭据Id
  * @param repository 制品仓库名称
  * @param directory 目录（推荐定义：/buName/serviceName/branch-version/serviceName-version.suffix）
+ * @param buildType 构建类型
  * @param filePath 文件路径
  * @param fileName 文件名称
  */
-def PushArtifactByApi(registry, credentialsId, repository, directory, filePath, fileName) {
+def PushArtifactByApi(registry, credentialsId, repository, directory, buildType, filePath, fileName) {
+    String requestType = ""
+    switch (buildType) {
+        case "maven":
+            requestType = "application/java-archive"
+            break
+        case "mavenSkip":
+            requestType = "application/java-archive"
+            break
+        case "npm":
+            requestType = "application/x-zip-compressed"
+            break
+        case "npmSkip":
+            requestType = "application/x-zip-compressed"
+            break
+        default:
+            requestType = "application/x-zip-compressed"
+            println("No such tools ... [maven/mavenSkip/gradle/ant/go/npm/yarn]")
+            break
+    }
     withCredentials([usernamePassword(credentialsId: "${credentialsId}",
             usernameVariable: 'NEXUS_USERNAME',
             passwordVariable: 'NEXUS_PASSWORD')]) {
@@ -18,7 +38,7 @@ def PushArtifactByApi(registry, credentialsId, repository, directory, filePath, 
                 -H "accept: application/json" \\
                 -H "Content-Type: multipart/form-data" \\
                 -F "raw.directory=${directory}" \\
-                -F "raw.asset1=@${filePath}/${fileName};type=application/java-archive" \\
+                -F "raw.asset1=@${filePath}/${fileName};type=${requestType}" \\
                 -F "raw.asset1.filename=${fileName}" \\
                 -u "${NEXUS_USERNAME}":"${NEXUS_PASSWORD}"
         """

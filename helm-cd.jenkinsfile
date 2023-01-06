@@ -74,7 +74,7 @@ pipeline {
                     // Git文件模板名称
                     fileName = "values.yaml"
                     // Git模板文件路径：项目服务名称_Helm/values.yaml
-                    filePath = "${env.serviceName}/${env.serviceName}_Helm/${fileName}"
+                    filePath = "${env.serviceName}/${fileName}"
                     // Kubernetes发布模板文件内容替换
                     kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.port}")
                 }
