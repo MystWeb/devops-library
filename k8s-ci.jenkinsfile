@@ -142,6 +142,17 @@ pipeline {
                         // 上传制品
                         artifact.PushArtifactByApi("${env.artifactRegistry}", "${env.artifactCredentialsId}", "${env.artifactRepository}",
                                 "${env.buName}/${env.serviceName}/${env.version}", "${env.buildType}", "${env.filePath}", "${env.newFileName}")
+                    } else if ("${env.buildType}" == "npm" || "${env.buildType}" == "npmSkip") {
+                        env.filePath = "dist"
+                        fileSuffix = "zip"
+                        env.newFileName = "${env.serviceName}-${env.version}.${fileSuffix}"
+                        sh """
+                            zip -r ${env.newFileName} ${env.filePath}
+                            mv ${env.newFileName} ${env.filePath}
+                        """
+                        // 上传制品
+                        artifact.PushArtifactByApi("${env.artifactRegistry}", "${env.artifactCredentialsId}", "${env.artifactRepository}",
+                                "${env.buName}/${env.serviceName}/${env.version}", "${env.buildType}", "${env.filePath}", "${env.newFileName}")
                     } else {
                         env.result = sh returnStdout: true, script: "sh artifact.sh ${env.filePath} ${env.serviceName} ${env.version}" - "\n"
                         env.newFileName = "${env.result}" - "\n"

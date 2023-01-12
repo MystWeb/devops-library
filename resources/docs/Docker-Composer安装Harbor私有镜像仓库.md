@@ -645,3 +645,52 @@ docker push harbor.mystweb.cn/devops/nginx:1.23.3
 docker pull harbor.mystweb.cn/devops/nginx:1.23.3
 ```
 
+## 八、Containerd配置私有镜像仓库
+
+> containerd 实现了 kubernetes 的 Container Runtime Interface (CRI) 接口，提供容器运行时核心功能，如镜像管理、容器管理等，相比 dockerd 更加简单、健壮和可移植。
+>
+> 从docker过度还是需要一点时间慢慢习惯的，今天来探讨containerd 如何从无域名与权威证书的私有仓库harbor，下载镜像！
+>
+> containerd 不能像docker一样 `docker login harbor.example.com` 登录到镜像仓库,无法从harbor拉取到镜像。
+
+修改Containerd配置文件
+
+```bash
+vim /etc/containerd/config.toml
+```
+
+- [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]：镜像仓库源地址
+- endpoint = ["https://registry-1.docker.io"]：镜像仓库代理地址
+- insecure_skip_verify = true：是否跳过安全认证
+- [plugins."io.containerd.grpc.v1.cri".registry.configs."192.168.100.150:8082".auth]：私有镜像仓库授权认证
+  - 配置私有镜像仓库账号密码后，k8s Pod拉取镜像无需创建Secrets，Deployment也无需配置Secrets
+
+- 配置文件参考：https://github.com/containerd/containerd/blob/main/docs/cri/registry.md
+
+```toml
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = ""
+
+      [plugins."io.containerd.grpc.v1.cri".registry.auths]
+
+      [plugins."io.containerd.grpc.v1.cri".registry.configs]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."192.168.100.150:8082".tls]
+          insecure_skip_verify = true  # 是否跳过安全认证
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."192.168.100.150:8082".auth]
+          username = "admin"
+          password = "proaim@2013"
+      [plugins."io.containerd.grpc.v1.cri".registry.headers]
+
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+          endpoint = ["https://registry-1.docker.io"]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."192.168.100.150:8082"]
+          endpoint = ["http://192.168.100.150:8082"]
+```
+
+拉取和查看镜像
+
+```bash
+ctr -n k8s.io image pull 192.168.100.150:8082/proaim/proaim-trinity-service:RELEASE-1.2.0-fc67c4d5 --plain-http --user admin:Harbor12345
+ctr -n k8s.io image ls
+```

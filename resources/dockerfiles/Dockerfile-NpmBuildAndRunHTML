@@ -1,0 +1,33 @@
+# Start with a base image containing Node runtime
+FROM node:16.18.0 as BUILD
+
+# Add Maintainer Info
+LABEL maintainer="ziming.xing@proaimltd.com"
+
+# Copy source code
+COPY . /usr/src/app
+
+# Define variable parameters
+ARG tenant
+ENV tenant=${tenant}
+ARG industry
+ENV industry=${industry}
+
+# Node Build
+WORKDIR /usr/src/app
+
+RUN npm cache clean --force \
+  && echo "==> npm cache clean done" \
+  && npm config set registry https://registry.npmmirror.com/ \
+  && npm install \
+  && echo "==> npm install done" \
+  && tenant=${tenant} industry=${industry} npm run build \
+  && echo "==> npm build done, tenant=${tenant}, industry=${industry}"
+
+# Start with a base image containing Java runtime
+FROM nginx:1.23.2
+# Add the built artifact
+COPY --from=BUILD /usr/src/app/dist /usr/share/nginx/html/
+WORKDIR /usr/share/nginx/html/
+
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf

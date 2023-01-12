@@ -28,7 +28,10 @@ def DockerBuildAndPushImage(registry, credentialsId, imageName, imageTag, filePa
             # 删除镜像
             sleep 5
             docker rmi ${registry}/${imageName}:${imageTag}
-            # docker rmi \$(docker images -f "dangling=true" -q)
+            
+            if [ -n \$(docker images -f "dangling=true" -q) ]; then
+                docker rmi \$(docker images -f "dangling=true" -q)
+            fi
         """
     }
 

@@ -42,7 +42,7 @@ def GoBuild(configPath = "demo.go") {
  * Npm构建
  */
 def NpmBuild() {
-    sh "npm install && npm run build"
+    sh "npm cache clean --force && npm install && npm run build"
 }
 
 /**

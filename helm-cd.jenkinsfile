@@ -22,12 +22,12 @@ pipeline {
     }
 
     parameters {
-        string defaultValue: 'RELEASE-1.1.1', description: '注意：选择应用发布分支', name: 'branchName'
-        string defaultValue: 'f0b54c03-789d-4ca4-847d-29f83236ef8a', description: '访问凭据-GitLab', name: 'credentialsId'
-        string defaultValue: 'http://192.168.20.194/devops/devops-k8s-deployment.git', description: '注意：Helm Chart仓库地址', name: 'helmSrcUrl'
+        string defaultValue: 'RELEASE-1.2.0', description: '注意：选择应用发布分支', name: 'branchName'
+        string defaultValue: 'http://192.168.100.150/devops/devops-k8s-deployment.git', description: '注意：Helm Chart仓库地址', name: 'helmSrcUrl'
         string defaultValue: 'main', description: '注意：Helm Chart分支名称', name: 'helmBranchName'
-        choice choices: ['devops.maven.service', 'devops.ui.service'], description: '服务访问的域名', name: 'domainName'
-        string defaultValue: '8080', description: '注意：服务监听的端口号', name: 'port'
+        choice choices: ['dev01', 'dev02', 'test01', 'test02'], description: '环境列表', name: 'envList'
+        choice choices: ['proaim.trinity.ui', 'proaim.trinity.service'], description: '服务访问的域名（注意：域名末尾会追加环境选择：domainName.dev01）', name: 'domainName'
+        string defaultValue: '80', description: '注意：服务监听的端口号', name: 'port'
     }
 
     stages {
@@ -38,19 +38,27 @@ pipeline {
 //                    env.buildType = "${JOB_NAME}".split("-")[1]
                     // JOB任务前缀（业务名称/组名称）
                     env.buName = "${JOB_NAME}".split('-')[0]
+                    // 产品名称
+                    env.productName = "${JOB_NAME}".split('-')[1]
                     // 服务/项目名称
                     env.serviceName = "${JOB_NAME}".split('_')[0]
-                    // GitLab用户Token访问凭据Id
-                    env.gitlabUserTokenCredentialsId = "926a978a-5cef-49ca-8ff8-5351ed0700bf"
+                    // GitLab访问凭据Id：GitLab-admin-账号密码（192.168.100.150）
+                    env.credentialsId = "6271c438-8197-4392-a45e-94efd9f7afa3"
+                    // GitLab用户（Admin）Token访问凭据Id：GitLab-admin-token（192.168.100.150）
+                    env.gitlabUserTokenCredentialsId = "07163983-8c80-4c4b-bd63-dc5261f23117"
                     // Git项目Id
                     env.projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${env.serviceName}")
                     // Git提交ID
                     env.commitId = gitlab.GetShortCommitIdByApi("${env.gitlabUserTokenCredentialsId}", "${env.projectId}", "${env.branchName}")
                     // 服务版本号（推荐定义："${branchName}-${commitId}"）
                     env.version = "${env.branchName}-${env.commitId}"
+                    // 服务访问的域名
+                    env.domainName = "${env.domainName}.${env.envList}"
+                    // 服务部署的命名空间
+                    env.namespace = "${env.buName}-${env.productName}-${env.envList}"
 
                     // 修改Jenkins构建描述
-                    currentBuild.description = """ branchName：${env.branchName} \n commitId：${env.commitId} \n namespace：${env.buName} \n """
+                    currentBuild.description = """ branchName：${env.branchName} \n commitId：${env.commitId} \n namespace：${env.namespace} \n domainName：${env.domainName} """
                     // 修改Jenkins构建名称
                     currentBuild.displayName = "${env.version}"
                 }
@@ -60,8 +68,8 @@ pipeline {
         stage("Checkout") {
             steps {
                 script {
-                    sh "[ -d ${env.serviceName} ] || mkdir ${env.serviceName}"
-                    ws("${WORKSPACE}/${env.serviceName}") {
+                    sh "[ -d ${env.namespace} ] || mkdir ${env.namespace}"
+                    ws("${WORKSPACE}/${env.namespace}") {
                         checkout.GetCode("${env.helmSrcUrl}", "${env.helmBranchName}", "${env.credentialsId}")
                     }
                 }
@@ -74,7 +82,7 @@ pipeline {
                     // Git文件模板名称
                     fileName = "values.yaml"
                     // Git模板文件路径：项目服务名称_Helm/values.yaml
-                    filePath = "${env.serviceName}/${fileName}"
+                    filePath = "${env.namespace}/${env.serviceName}/${fileName}"
                     // Kubernetes发布模板文件内容替换
                     kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.port}")
                 }
@@ -84,7 +92,7 @@ pipeline {
         stage("HelmDeploy") {
             steps {
                 script {
-                    kubernetes.HelmDeploy("${env.buName}", "${env.serviceName}/${env.serviceName}_Helm", "${env.serviceName}")
+                    kubernetes.HelmDeploy("${env.namespace}", "${env.namespace}/${env.serviceName}", "${env.serviceName}")
                 }
             }
         }
@@ -105,7 +113,7 @@ pipeline {
             input {
                 message "是否进行回滚"
                 ok "提交"
-                submitter "admin,myst"
+                submitter "admin,proaim-dev,proaim-test"
                 parameters {
                     choice(choices: ['no', 'yes'], name: 'opts')
                 }
@@ -130,11 +138,11 @@ pipeline {
 
     }
 
-    post {
+    /*post {
         always {
             // clean workspace build
             cleanWs()
         }
-    }
+    }*/
 
 }

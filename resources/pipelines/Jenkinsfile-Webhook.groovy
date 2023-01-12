@@ -13,6 +13,23 @@ def unitTest = new UnitTest()
 // 任务名称截取构建类型（任务名称示例：devops-maven-service）
 env.buildType = "${JOB_NAME}".split("-")[1]
 
+/**
+ * Post content parameters
+ * - Variable = webhookData
+ * - Expression = $
+ * - Variable = object_kind
+ * - Expression = $.object_kind
+ * - Variable = before
+ * - Expression = $.before
+ * - Variable = after
+ * - Expression = $.after
+ * - Token = ${GitLab-ProjectName}
+ *
+ * admin/application_settings/network/出站请求/允许来自 web hooks 和服务对本地网络的请求 = true
+ * ${GitLab-ProjectName}/Settings/Webhooks
+ * - URL = http://JENKINS_URL/generic-webhook-trigger/invoke?token=${GitLab-ProjectName}
+ * - SSL验证 = true
+ */
 // 打印WebHook变量值
 println("Object Kind：${object_kind} \n Before：${before} \n After：${after}")
 println("Git Lab WebhookData：${webhookData}")
