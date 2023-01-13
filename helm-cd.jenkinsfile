@@ -6,11 +6,13 @@
 import org.devops.Checkout
 import org.devops.GitLab
 import org.devops.Kubernetes
+import org.devops.ProjectCustom
 
 // New实例化
 def checkout = new Checkout()
 def gitlab = new GitLab()
 def kubernetes = new Kubernetes()
+def projectCustom = new ProjectCustom()
 pipeline {
     agent {
         label "k8s"
@@ -83,8 +85,14 @@ pipeline {
                     fileName = "values.yaml"
                     // Git模板文件路径：项目服务名称_Helm/values.yaml
                     filePath = "${env.namespace}/${env.serviceName}/${fileName}"
+                    // 项目定制参数
+                    Map projectParamsMap = projectCustom.getProjectParamsMap("${env.envList}")
                     // Kubernetes发布模板文件内容替换
-                    kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.port}")
+                    if (projectParamsMap == null) {
+                        kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.port}")
+                    } else {
+                        kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.port}", projectParamsMap)
+                    }
                 }
             }
         }
@@ -101,9 +109,14 @@ pipeline {
             steps {
                 script {
                     // 注意：自定义域名需配置Hosts文件！
-                    result = sh returnStdout: true, script: """ curl "http://${env.domainName}/health" """ - "\n"
-                    if ("ok" == result) {
-                        println("Successful！")
+                    try {
+                        sleep(5)
+                        result = sh returnStdout: true, script: """ curl "http://${env.domainName}/health" """ - "\n"
+                        if ("ok" == result) {
+                            println("Successful！")
+                        }
+                    } catch (Exception e) {
+                        println(e)
                     }
                 }
             }

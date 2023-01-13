@@ -109,6 +109,28 @@ def HelmReleaseTemplateFileReplace(filePath, domainName, port) {
 }
 
 /**
+ * Kubernetes发布模板文件内容替换（CD）
+ * @param filePath Git模板文件路径：项目服务名称_Helm/values.yaml
+ * @param domainName 访问域名
+ * @param port 端口号
+ * @param projectParamsMap 项目参数
+ * 注意：writeYaml data: yamlData 变量值不可以加"${yamlData}"，否则会丢失换行符且文本开头及末尾增加单引号：'
+ */
+def HelmReleaseTemplateFileReplace(filePath, domainName, port, Map projectParamsMap) {
+    // 替换模板文件内容
+    yamlData = readYaml file: "${filePath}"
+    yamlData.ingress.hosts[0].host = "${domainName}"
+    yamlData.service.port = "${port}"
+    /*for (projectParams in projectParamsMap) {
+        yamlData."${projectParams.key}" = "${projectParams.value}"
+    }*/
+    projectParamsMap.each { key, value -> yamlData."${key}" = "${value}" }
+    // 根据文件内容生成新文件
+    writeYaml charset: "UTF-8", overwrite: "true", file: "${filePath}", data: yamlData
+    sh "cat ${filePath}"
+}
+
+/**
  * Kubernetes - Helm部署应用
  * @param namespace 命名空间
  * @param deployFilePath 部署文件路径（Helm Chart）

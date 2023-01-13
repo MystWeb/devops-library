@@ -81,3 +81,6 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+PARAMS: "--spring.config.additional-location=classpath:/config/proaim/ \
+--spring.profiles.active=test1"
