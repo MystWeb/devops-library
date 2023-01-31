@@ -34,16 +34,28 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: http
-              containerPort: {{ .Values.service.port }}
-              protocol: TCP
+            {{- range .Values.services }}
+            - name: {{ .name }}
+              containerPort: {{ .port }}
+              protocol: {{ .protocol }}
+            {{- end }}
           livenessProbe:
+            initialDelaySeconds: 120
+            timeoutSeconds: 2
+            periodSeconds: 10
+            failureThreshold: 2
             httpGet:
-              path: /health
+              path: /
+              #path: /health
               port: http
           readinessProbe:
+            initialDelaySeconds: 120
+            timeoutSeconds: 2
+            periodSeconds: 10
+            failureThreshold: 2
             httpGet:
-              path: /health
+              path: /
+              #path: /health
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

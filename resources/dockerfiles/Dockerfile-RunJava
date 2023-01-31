@@ -7,9 +7,9 @@ LABEL maintainer="ziming.xing@proaimltd.com"
 # Add arthas
 COPY --from=hengyunabc/arthas:latest /opt/arthas /opt/arthas
 
-# Custom Param
+# Custom Param，参数说明：https://www.cnblogs.com/liaojie970/p/8677124.html
 ENV JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom \
-  -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 \
+  -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005 \
   -XX:+PrintFlagsFinal -XX:+UnlockExperimentalVMOptions  \
   -Xms1024m -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m "
 ARG fileName

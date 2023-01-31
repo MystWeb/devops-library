@@ -39,7 +39,18 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 8080
+#  port: 8080
+
+services:
+  - port: 8080
+    protocol: TCP
+    name: http
+  - port: 5005
+    protocol: TCP
+    name: debug
+  - port: 9999
+    protocol: TCP
+    name: xxl-job
 
 ingress:
   enabled: true
@@ -52,6 +63,17 @@ ingress:
       paths:
         - path: /
           pathType: ImplementationSpecific
+          port: 8080
+    - host: devops.maven.service.debug
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+          port: 5005
+    - host: devops.maven.service.xxl.job
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+          port: 9999
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
@@ -64,10 +86,10 @@ resources: #{}
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
    limits:
      cpu: 1000m
-     memory: 1280Mi
+     memory: 4096Mi
    requests:
-     cpu: 100m
-     memory: 128Mi
+     cpu: 500m
+     memory: 1024Mi
 
 autoscaling:
   enabled: false
@@ -82,5 +104,6 @@ tolerations: []
 
 affinity: {}
 
+# ProjectCustom：项目后端Java启动参数
 PARAMS: "--spring.config.additional-location=classpath:/config/proaim/ \
 --spring.profiles.active=test1"

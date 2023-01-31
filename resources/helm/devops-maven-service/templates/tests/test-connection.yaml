@@ -8,8 +8,10 @@ metadata:
     "helm.sh/hook": test
 spec:
   containers:
+    {{- range .Values.services }}
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "devops-maven-service.fullname" . }}:{{ .Values.service.port }}']
+      args: ['devops-maven-service:{{ .port }}']
+    {{- end }}
   restartPolicy: Never
