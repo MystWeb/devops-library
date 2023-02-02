@@ -64,16 +64,22 @@ ingress:
         - path: /
           pathType: ImplementationSpecific
           port: 8080
-    - host: devops.maven.service.debug
-      paths:
-        - path: /
+        - path: /debug
           pathType: ImplementationSpecific
           port: 5005
-    - host: devops.maven.service.xxl.job
-      paths:
-        - path: /
+        - path: /xxl-job
           pathType: ImplementationSpecific
-          port: 9999
+          port: 5005
+#    - host: devops.maven.service.debug
+#      paths:
+#        - path: /
+#          pathType: ImplementationSpecific
+#          port: 5005
+#    - host: devops.maven.service.xxl.job
+#      paths:
+#        - path: /
+#          pathType: ImplementationSpecific
+#          port: 9999
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
