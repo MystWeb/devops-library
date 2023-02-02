@@ -2,7 +2,7 @@
 FROM node:16.18.0 as BUILD
 
 # Add Maintainer Info
-LABEL maintainer="ziming.xing@proaimltd.com"
+LABEL maintainer="77784423@qq.com"
 
 # Copy source code
 COPY . /usr/src/app

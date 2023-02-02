@@ -27,7 +27,7 @@ locals {
     # 注意：同步postgresql容器IP：172.18.0.5
     "SONAR_JDBC_URL=jdbc:postgresql://172.18.0.5:5432/sonar",
     "SONAR_JDBC_USERNAME=postgres",
-    "SONAR_JDBC_PASSWORD=proaim@2013"
+    "SONAR_JDBC_PASSWORD=devops@2013"
   ]
   container_network = data.terraform_remote_state.network.outputs.network[0]["name"]
   container_ip      = "172.18.0.6"

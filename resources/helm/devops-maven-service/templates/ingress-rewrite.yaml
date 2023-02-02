@@ -1,4 +1,4 @@
-# 前后端分离的ingress配置
+# 前后端分离项目的ingress配置
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

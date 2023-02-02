@@ -20,7 +20,7 @@ locals {
   container_memory      = 12288
   container_memory_swap = 15360
   container_env         = [
-    "POSTGRES_PASSWORD=proaim@2013"
+    "POSTGRES_PASSWORD=devops@2013"
   ]
   container_network = data.terraform_remote_state.network.outputs.network[0]["name"]
   container_ip      = "172.18.0.5"

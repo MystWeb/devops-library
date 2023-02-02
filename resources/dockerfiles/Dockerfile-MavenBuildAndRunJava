@@ -2,7 +2,7 @@
 FROM maven:3.8-jdk-11 as BUILD
 
 # Add Maintainer Info
-LABEL maintainer="ziming.xing@proaimltd.com"
+LABEL maintainer="77784423@qq.com"
 
 # Maven Build
 COPY . /usr/src/app

@@ -52,7 +52,7 @@ mkdir -p /etc/docker
 #cat <<EOF>> /etc/docker/daemon.json
 cat > /etc/docker/daemon.json <<EOF
 {
-    "insecure-registries":["http://192.168.100.150:8082", "https://harbor.proaimltd.com"],
+    "insecure-registries":["http://192.168.100.150:8082", "https://harbor.devops.com"],
     "exec-opts": ["native.cgroupdriver=systemd"],
     "registry-mirrors": [
         "http://hub-mirror.c.163.com",
@@ -188,7 +188,7 @@ https:
   # 开启https访问，默认为443端口
   port: 443
   # The path of cert and key files for nginx
-  # OpenSSL生成自签证书：openssl req -newkey rsa:4096 -nodes -sha256 -keyout /data/harbor/certs/ca.key -x509 -out /data/harbor/certs/ca.crt -subj C=CN/ST=BJ/L=BJ/O=DEVOPS/CN=harbor.mystweb.cn -days 365000
+  # OpenSSL生成自签证书：openssl req -newkey rsa:4096 -nodes -sha256 -keyout /data/harbor/certs/ca.key -x509 -out /data/harbor/certs/ca.crt -subj C=CN/ST=BJ/L=BJ/O=DEVOPS/CN=harbor.devops.cn -days 365000
   # 修改为自己公钥路径及名称
   certificate: /opt/harbor/certs
   private_key: /opt/harbor/certs
@@ -208,13 +208,13 @@ https:
 # It only works in first time to install harbor
 # Remember Change the admin password from UI after launching Harbor.
 # admin账号密码，默认为Harbor12345
-harbor_admin_password: proaim@2013
+harbor_admin_password: devops@2013
 
 # Harbor DB configuration
 database:
   # The password for the root user of Harbor DB. Change this before any production use.
   # 数据库密码，默认为root123
-  password: proaim@2013
+  password: devops@2013
   # The maximum number of connections in the idle connection pool. If it <=0, no idle connections are retained.
   max_idle_conns: 100
   # The maximum number of open connections to the database. If it <= 0, then there is no limit on the number of open connections.
@@ -483,7 +483,7 @@ mkdir -p /opt/harbor/certs /opt/harbor/data && cd /opt/harbor/certs
 ### 4.5 OpenSSL生成自签证书
 
 ```bash
-openssl req -newkey rsa:4096 -nodes -sha256 -keyout /opt/harbor/certs/ca.key -x509 -out /opt/harbor/certs/ca.crt -subj C=CN/ST=BJ/L=BJ/O=DEVOPS/CN=harbor.mystweb.cn -days 36500
+openssl req -newkey rsa:4096 -nodes -sha256 -keyout /opt/harbor/certs/ca.key -x509 -out /opt/harbor/certs/ca.crt -subj C=CN/ST=BJ/L=BJ/O=DEVOPS/CN=harbor.devops.cn -days 36500
 ```
 
 - req 产生证书签发申请命令
@@ -514,7 +514,7 @@ ls -lrt /opt/harbor/certs/
 
 通过浏览器访问harbor主页http://192.168.100.150:8082，页面会自动跳转到https。
 
-如果配置了主机名解析或DNS，可以通过域名来访问，如：https://harbor.mystweb.cn
+如果配置了主机名解析或DNS，可以通过域名来访问，如：https://harbor.devops.cn
 
 ## 五、harbor服务基本操作
 
@@ -551,7 +551,7 @@ docker-compose start
 
 ### 6.1 添加镜像信任仓库
 
-修改docker配置文件，添加本机信任可以访问镜像仓库一行："insecure-registries": ["https://harbor.mystweb.cn"]，如果有多行参数，上一行末尾添加逗号。
+修改docker配置文件，添加本机信任可以访问镜像仓库一行："insecure-registries": ["https://harbor.devops.cn"]，如果有多行参数，上一行末尾添加逗号。
 
 ```bash
 vi /etc/docker/daemon.json
@@ -559,7 +559,7 @@ vi /etc/docker/daemon.json
 
 ```bash
 {
-    "insecure-registries":["http://192.168.100.150:8082", "https://harbor.mystweb.cn"],
+    "insecure-registries":["http://192.168.100.150:8082", "https://harbor.devops.cn"],
     "registry-mirrors": [
         "http://hub-mirror.c.163.com",
         "https://docker.mirrors.ustc.edu.cn"
@@ -582,7 +582,7 @@ systemctl daemon-reload && systemctl restart docker
 ```bash
 vi /etc/hosts
 ......
-192.168.100.150 harbor.mystweb.cn
+192.168.100.150 harbor.devops.cn
 ```
 
 登入地址
@@ -591,11 +591,11 @@ vi /etc/hosts
 
 ```bash
 # 登陆方式一
-docker login -u admin -p proaim@2013 harbor.mystweb.cn
+docker login -u admin -p devops@2013 harbor.devops.cn
 # 登录方式二（推荐）
-echo "proaim@2013" | docker login -u admin --password-stdin harbor.mystweb.cn
+echo "devops@2013" | docker login -u admin --password-stdin harbor.devops.cn
 # 登录方式三（所有方式均支持HTTPS协议登录）
-docker login https://harbor.mystweb.cn
+docker login https://harbor.devops.cn
 ```
 
 ### 6.4 常见问题
@@ -603,7 +603,7 @@ docker login https://harbor.mystweb.cn
 如果报类似错误：
 
 ```bash
-Error response from daemon: Get "https://harbor.mystweb.cn/v2/": x509: certificate relies on legacy Common Name field, use SANs or temporarily enable Common Name matching with GODEBUG=x509ignoreCN=0
+Error response from daemon: Get "https://harbor.devops.cn/v2/": x509: certificate relies on legacy Common Name field, use SANs or temporarily enable Common Name matching with GODEBUG=x509ignoreCN=0
 ```
 
 停止harbor
@@ -629,20 +629,20 @@ docker pull nginx:1.23.3
 将本地镜像打上tag
 
 ```bash
-docker tag nginx:1.23.3 harbor.mystweb.cn/devops/nginx:1.23.3
+docker tag nginx:1.23.3 harbor.devops.cn/devops/nginx:1.23.3
 docker image ls | grep "nginx"
 ```
 
 上传镜像
 
 ```bash
-docker push harbor.mystweb.cn/devops/nginx:1.23.3
+docker push harbor.devops.cn/devops/nginx:1.23.3
 ```
 
 下载镜像
 
 ```bash
-docker pull harbor.mystweb.cn/devops/nginx:1.23.3
+docker pull harbor.devops.cn/devops/nginx:1.23.3
 ```
 
 ## 八、Containerd配置私有镜像仓库
@@ -678,7 +678,7 @@ vim /etc/containerd/config.toml
           insecure_skip_verify = true  # 是否跳过安全认证
         [plugins."io.containerd.grpc.v1.cri".registry.configs."192.168.100.150:8082".auth]
           username = "admin"
-          password = "proaim@2013"
+          password = "devops@2013"
       [plugins."io.containerd.grpc.v1.cri".registry.headers]
 
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
@@ -691,6 +691,6 @@ vim /etc/containerd/config.toml
 拉取和查看镜像
 
 ```bash
-ctr -n k8s.io image pull 192.168.100.150:8082/proaim/proaim-trinity-service:RELEASE-1.2.0-fc67c4d5 --plain-http --user admin:Harbor12345
+ctr -n k8s.io image pull 192.168.100.150:8082/devops/devops-demo-service:RELEASE-1.2.0-fc67c4d5 --plain-http --user admin:Harbor12345
 ctr -n k8s.io image ls
 ```

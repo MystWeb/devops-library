@@ -111,5 +111,5 @@ tolerations: []
 affinity: {}
 
 # ProjectCustom：项目后端Java启动参数
-PARAMS: "--spring.config.additional-location=classpath:/config/proaim/ \
+PARAMS: "--spring.config.additional-location=classpath:/config/devops/ \
 --spring.profiles.active=test1"

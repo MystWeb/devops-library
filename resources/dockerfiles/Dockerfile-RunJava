@@ -2,7 +2,7 @@
 FROM openjdk:11-jdk-slim
 
 # Add Maintainer Info
-LABEL maintainer="ziming.xing@proaimltd.com"
+LABEL maintainer="77784423@qq.com"
 
 # Add arthas
 COPY --from=hengyunabc/arthas:latest /opt/arthas /opt/arthas

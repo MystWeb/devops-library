@@ -21,7 +21,7 @@ pipeline {
     parameters {
         string defaultValue: 'RELEASE-1.2.0', description: '注意：选择发布分支', name: 'branchName'
         choice choices: ['dev01', 'dev02', 'test01', 'test02'], description: '环境列表', name: 'envList'
-        choice choices: ['proaim.trinity.ui', 'proaim.trinity.service'], description: '服务访问的域名（注意：域名末尾会追加环境选择：domainName.dev01）', name: 'domainName'
+        choice choices: ['devops.demo.ui', 'devops.demo.service'], description: '服务访问的域名（注意：域名末尾会追加环境选择：domainName.dev01）', name: 'domainName'
         string defaultValue: '8080', description: '注意：服务监听的端口号', name: 'port'
     }
 

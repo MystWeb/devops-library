@@ -8,7 +8,7 @@ package org.devops
  * @param imageTag 镜像标签（推荐定义："${branchName}-${commitId}"）
  * @param filePath 文件路径
  * @param fileName 文件名称（推荐定义："${serviceName}-${version}.${fileSuffix}"）
- * Docker（/etc/docker/daemon.json）配置Harbor私有仓库："insecure-registries":["http://192.168.100.150:8082", "https://harbor.proaimltd.com"],
+ * Docker（/etc/docker/daemon.json）配置Harbor私有仓库："insecure-registries":["http://192.168.100.150:8082", "https://harbor.devops.com"],
  */
 def DockerBuildAndPushImage(registry, credentialsId, imageName, imageTag, filePath, fileName) {
     withCredentials([usernamePassword(credentialsId: "${credentialsId}",
