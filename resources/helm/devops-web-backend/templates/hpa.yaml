@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "devops-maven-service.fullname" . }}
+  name: {{ include "devops-web-backend.fullname" . }}
   labels:
-    {{- include "devops-maven-service.labels" . | nindent 4 }}
+    {{- include "devops-web-backend.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "devops-maven-service.fullname" . }}
+    name: {{ include "devops-web-backend.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

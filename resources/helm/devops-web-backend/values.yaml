@@ -1,17 +1,16 @@
-# Default values for devops-maven-service.
+# Default values for devops-web-backend.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
 
 image:
-  repository: 192.168.20.194:8088/devops/devops-maven-service
+  repository: nginx
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "RELEASE-1.1.2-ab79bab3"
+  tag: ""
 
 imagePullSecrets: []
-#  - name: "harbor-account"
 nameOverride: ""
 fullnameOverride: ""
 
@@ -27,7 +26,7 @@ serviceAccount:
 podAnnotations: {}
 
 podSecurityContext: {}
-  # fsGroup: 2000
+# fsGroup: 2000
 
 securityContext: {}
   # capabilities:
@@ -35,14 +34,13 @@ securityContext: {}
   #   - ALL
   # readOnlyRootFilesystem: true
   # runAsNonRoot: true
-  # runAsUser: 1000
+# runAsUser: 1000
 
+serviceType: ClusterIP
 service:
-  type: ClusterIP
-#  port: 8080
-
-services:
-  - port: 8080
+  #  type: ClusterIP
+  #  port: 9090
+  - port: 9090
     protocol: TCP
     name: http
   - port: 5005
@@ -59,27 +57,28 @@ ingress:
     kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
   hosts:
-    - host: devops.maven.service
+    - host: devops.web.backend.dev01
       paths:
         - path: /
           pathType: ImplementationSpecific
-          port: 8080
+          port: 9090
         - path: /debug
           pathType: ImplementationSpecific
           port: 5005
         - path: /xxl-job
           pathType: ImplementationSpecific
-          port: 5005
-#    - host: devops.maven.service.debug
-#      paths:
-#        - path: /
-#          pathType: ImplementationSpecific
-#          port: 5005
-#    - host: devops.maven.service.xxl.job
-#      paths:
-#        - path: /
-#          pathType: ImplementationSpecific
-#          port: 9999
+          port: 9999
+    - host: devops.web.frontend.dev01
+      paths:
+        #- path: /api(/|$)(.*)
+          #pathType: Prefix
+        - path: /api
+          pathType: ImplementationSpecific
+          port: 9090
+        - path: /ws-server
+          pathType: ImplementationSpecific
+          port: 9090
+
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:
@@ -90,12 +89,12 @@ resources: #{}
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-   limits:
-     cpu: 1000m
-     memory: 4096Mi
-   requests:
-     cpu: 500m
-     memory: 1024Mi
+  limits:
+    cpu: 1000m
+    memory: 4096Mi
+  requests:
+    cpu: 500m
+    memory: 1024Mi
 
 autoscaling:
   enabled: false

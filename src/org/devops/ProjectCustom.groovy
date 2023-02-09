@@ -26,3 +26,19 @@ static def getProjectParamsMap(envList) {
     ]
     return map["${envList}"]
 }
+
+/**
+ * 获取定制化Git项目的projectId
+ * 如：GitLab项目名称：devops/devops-web-backend（标准化），devops/devops01-demo（非规范化）
+ * @param projectName 环境列表
+ * @return 非规范化Git项目的projectId
+ */
+static def getCustomProjectIdByProjectName(projectName) {
+    switch (projectName) {
+        case "devops-web-backend":
+            return 41
+            break
+        default:
+            break
+    }
+}

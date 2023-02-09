@@ -26,7 +26,7 @@ pipeline {
     }
 
     parameters {
-        string defaultValue: 'http://192.168.100.150/devops/devops-service.git', description: '仓库地址', name: 'srcUrl'
+        string defaultValue: 'http://192.168.100.150/devops/devops-web-frontend.git', description: '仓库地址', name: 'srcUrl'
         string defaultValue: 'RELEASE-1.2.0', description: '分支名称', name: 'branchName'
         choice choices: ['maven', 'custom', 'mavenSkip', 'gradle', 'ant', 'go', 'npm', 'npmSkip', 'yarn'], description: '构建类型', name: 'buildType'
         string defaultValue: '', name: 'customBuild', description: '自定义构建命令（示例：mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests && mvn test）'
@@ -38,8 +38,8 @@ pipeline {
             steps {
                 script {
                     println("Checkout")
-                    // GitLab访问凭据Id：GitLab-admin-账号密码（192.168.100.150）
-                    env.credentialsId = "6271c438-8197-4392-a45e-94efd9f7afa3"
+                    // GitLab访问凭据Id：id_ed25519 (GitLab-Enterprise-私钥文件（192.168.100.150:/root/.ssh/id_ed25519）)
+                    env.credentialsId = "7f714471-562a-4ddd-884b-186f90556a9a"
                     checkout.GetCode("${env.srcUrl}", "${env.branchName}", "${env.credentialsId}")
                 }
             }
@@ -71,8 +71,8 @@ pipeline {
                     env.imageRegistryCredentialsId = "cc81ccc9-962f-42ab-bbe6-fa9383c6938f"
                     // SonarQube访问凭据Id：SonarQube-admin-token（192.168.100.150:9000）
                     env.sonarqubeUserTokenCredentialsId = "c23d40dd-a6c8-4a17-a0d1-23dd795fe773"
-                    // GitLab用户（Admin）Token访问凭据Id：GitLab-admin-token（192.168.100.150）
-                    env.gitlabUserTokenCredentialsId = "07163983-8c80-4c4b-bd63-dc5261f23117"
+                    // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_URL，users：devops）
+                    env.gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
                     // Git项目Id
                     env.projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${env.serviceName}")
 

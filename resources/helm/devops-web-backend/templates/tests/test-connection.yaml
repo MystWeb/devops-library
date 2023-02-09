@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "devops-web-backend.fullname" . }}-test-connection"
+  labels:
+    {{- include "devops-web-backend.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    {{- range .Values.service }}
+    - name: wget
+      image: busybox
+      command: [ 'wget' ]
+{{/*      args: ['{{ include "devops-web-backend.fullname" . }}:{{ .Values.service.port }}']*/}}
+      args: [ "{{ .name }}:{{ .port }}" ]
+      {{- end }}
+  restartPolicy: Never

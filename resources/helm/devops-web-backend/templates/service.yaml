@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "devops-web-backend.fullname" . }}
+  labels:
+    {{- include "devops-web-backend.labels" . | nindent 4 }}
+spec:
+{{/*  type: {{ .Values.service.type }}*/}}
+  type: {{ .Values.serviceType }}
+  ports:
+    {{- range .Values.service }}
+{{/*    - port: {{ .Values.service.port }}*/}}
+    - port: {{ .port }}
+      #targetPort: http
+      targetPort: {{ .name }}
+      protocol: {{ .protocol }}
+      #name: http
+      name: {{ .name }}
+    {{- end }}
+  selector:
+    {{- include "devops-web-backend.selectorLabels" . | nindent 4 }}

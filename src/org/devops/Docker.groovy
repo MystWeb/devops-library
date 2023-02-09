@@ -29,8 +29,13 @@ def DockerBuildAndPushImage(registry, credentialsId, imageName, imageTag, filePa
             sleep 5
             docker rmi ${registry}/${imageName}:${imageTag}
             
-            if [ -n \$(docker images -f "dangling=true" -q) ]; then
-                docker rmi \$(docker images -f "dangling=true" -q)
+            # 删除dangling镜像
+            danglingImages=\$(docker images -f "dangling=true" -q)
+            if [ -z \${danglingImages} ]; then
+                echo "No hanging images found."
+            else
+                echo "Removing hanging images..."
+                docker rmi \${danglingImages}
             fi
         """
     }

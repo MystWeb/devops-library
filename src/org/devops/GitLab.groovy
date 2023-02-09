@@ -81,7 +81,7 @@ def GitLabRequest(credentialsId, method, apiUrl) {
                 ${registry}/api/v4/${apiUrl} \
                 --header "PRIVATE-TOKEN: ${GITLAB_USER_TOKEN}"
             """
-
+        println("GitLabRequest：${response}")
         return response
     }
 }
@@ -121,6 +121,7 @@ def GitLabHttpRequest(credentialsId, method, apiUrl, requestBody) {
                 wrapAsMultipart: false,
                 requestBody: "${requestBody}"
     }
+    println("GitLabHttpRequest：${response}")
     return response
 }
 
