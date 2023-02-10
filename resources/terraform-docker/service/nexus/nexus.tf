@@ -4,7 +4,7 @@
 # Pull image
 resource "docker_image" "nexus" {
   # (String) The name of the Docker image, including any tags or SHA256 repo digests.
-  name         = "sonatype/nexus3:3.44.0"
+  name         = "sonatype/nexus3:3.47.1"
   # (Boolean) If true, then the Docker image won't be deleted on destroy operation.
   # If this is false, it will delete the image from the docker local storage on destroy operation.
   keep_locally = true

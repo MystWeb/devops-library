@@ -38,6 +38,7 @@ spec:
   {{- end }}
   rules:
     {{- range .Values.ingress.hosts }}
+    {{- if contains "backend" .host }}
     - host: {{ .host | quote }}
       http:
         paths:
@@ -59,5 +60,6 @@ spec:
               servicePort: {{ .port }}
               {{- end }}
           {{- end }}
+    {{- end }}
     {{- end }}
 {{- end }}

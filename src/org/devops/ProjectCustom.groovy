@@ -33,7 +33,7 @@ static def getProjectParamsMap(envList) {
  * @param projectName 环境列表
  * @return 非规范化Git项目的projectId
  */
-static def getCustomProjectIdByProjectName(projectName) {
+static def getProjectIdByProjectName(projectName) {
     switch (projectName) {
         case "devops-web-backend":
             return 41

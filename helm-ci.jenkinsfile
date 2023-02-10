@@ -71,6 +71,8 @@ pipeline {
                     env.imageRegistryCredentialsId = "cc81ccc9-962f-42ab-bbe6-fa9383c6938f"
                     // SonarQube访问凭据Id：SonarQube-admin-token（192.168.100.150:9000）
                     env.sonarqubeUserTokenCredentialsId = "c23d40dd-a6c8-4a17-a0d1-23dd795fe773"
+                    // dingTalk-robot-token（Jenkins钉钉群聊）
+                    env.dingTalkTokenCredentialsId = "8c6083c7-e1c2-47c0-9367-b67a9469bcd5"
                     // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_URL，users：devops）
                     env.gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
                     // Git项目Id
@@ -206,6 +208,16 @@ pipeline {
         always {
             // Delete workspace when build is done
             cleanWs()
+        }
+        success {
+            script {
+                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+            }
+        }
+        failure {
+            script {
+                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+            }
         }
     }
 

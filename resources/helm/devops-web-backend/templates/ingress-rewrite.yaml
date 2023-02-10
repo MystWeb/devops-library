@@ -40,7 +40,7 @@ spec:
   {{- end }}
   rules:
     {{- range .Values.ingress.hosts }}
-    {{- if contains "frontend" .host}}
+    {{- if contains "frontend" .host }}
     - host: {{ .host | quote }}
       http:
         paths:

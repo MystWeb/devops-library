@@ -51,13 +51,6 @@ ingress:
       paths:
         - path: /
           pathType: ImplementationSpecific
-    - host: devops.web.backend.dev01
-      paths:
-        - path: /api
-          pathType: ImplementationSpecific
-          service:
-            name: devops.web.backend
-            port: 9090
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:

@@ -6,10 +6,12 @@
 import org.devops.Checkout
 import org.devops.GitLab
 import org.devops.Kubernetes
+import org.devops.Notice
 import org.devops.ProjectCustom
 
 // New实例化
 def checkout = new Checkout()
+def notice = new Notice()
 def gitlab = new GitLab()
 def kubernetes = new Kubernetes()
 def projectCustom = new ProjectCustom()
@@ -44,10 +46,12 @@ pipeline {
                     env.productName = "${JOB_NAME}".split('-')[1]
                     // 服务/项目名称
                     env.serviceName = "${JOB_NAME}".split('_')[0]
+                    // dingTalk-robot-token（Jenkins钉钉群聊）
+                    env.dingTalkTokenCredentialsId = "8c6083c7-e1c2-47c0-9367-b67a9469bcd5"
                     // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_Edition_URL，users：devops）
                     env.gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
                     // Git项目Id
-                    env.projectId = projectCustom.getCustomProjectIdByProjectName("${env.serviceName}")
+                    env.projectId = projectCustom.getProjectIdByProjectName("${env.serviceName}")
                     if ("${env.projectId}" == "null") {
                         env.projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${env.serviceName}")
                     }
@@ -137,19 +141,13 @@ pipeline {
                     choice(choices: ['no', 'yes'], name: 'opts')
                 }
             }
-
             steps {
                 script {
-                    switch ("${opts}") {
-                        case "yes":
-                            // 注意：声明式：input {} 中 choices 无法获取变量值，所以此处改为脚本式
-                            def result = input message: "选择回滚版本?",
-                                    parameters: [choice(choices: "${env.REVISION}", name: 'revision')]
-                            println("选择回滚版本：${result}")
-                            sh "helm rollback ${env.serviceName} ${result} -n ${env.buName}"
-                            break
-                        case "no":
-                            break
+                    if ("${opts}" == "yes") {
+                        def result = input message: "选择回滚版本?",
+                                parameters: [choice(choices: "${env.REVISION}", name: 'revision')]
+                        println("选择回滚版本：${result}")
+                        sh "helm rollback ${env.serviceName} ${result} -n ${env.buName}"
                     }
                 }
             }
@@ -161,6 +159,16 @@ pipeline {
         always {
             // clean workspace build
             cleanWs()
+        }
+        success {
+            script {
+                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+            }
+        }
+        failure {
+            script {
+                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+            }
         }
     }
 
