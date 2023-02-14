@@ -40,6 +40,19 @@ def GetShortCommitIdByApi(credentialsId, projectId, branchName) {
 }
 
 /**
+ * 通过Api获取Commit Web URL（commit提交超链接）
+ * @param credentialsId GitLab用户Token访问凭据Id
+ * @param projectId 项目id
+ * @param branchName 分支名称
+ */
+def GetCommitWebURLByApi(credentialsId, projectId, branchName) {
+    apiUrl = "projects/${projectId}/repository/branches/${branchName}"
+    response = GitLabRequest("${credentialsId}", "GET", "${apiUrl}")
+    response = readJSON text: response - "\n"
+    return response.commit.web_url - "\n"
+}
+
+/**
  * 获取ProjectId
  * git fork：user-a/devops-service-app -> user-b/devops-service-app
  *

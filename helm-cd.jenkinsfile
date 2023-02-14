@@ -46,8 +46,10 @@ pipeline {
                     env.productName = "${JOB_NAME}".split('-')[1]
                     // 服务/项目名称
                     env.serviceName = "${JOB_NAME}".split('_')[0]
-                    // dingTalk-robot-token（Jenkins钉钉群聊）
+                    // DingTalk-robot-token（Jenkins钉钉群聊）
                     env.dingTalkTokenCredentialsId = "8c6083c7-e1c2-47c0-9367-b67a9469bcd5"
+                    // DingTalk-robot-id（Jenkins钉钉群聊）
+                    env.dingTalkRebotIdCredentialsId = "5213e392-d78e-4a9a-a37e-91f394309df1"
                     // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_Edition_URL，users：devops）
                     env.gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
                     // Git项目Id
@@ -58,6 +60,8 @@ pipeline {
                     println("projectId：${env.projectId}")
                     // Git提交ID
                     env.commitId = gitlab.GetShortCommitIdByApi("${env.gitlabUserTokenCredentialsId}", "${env.projectId}", "${env.branchName}")
+                    // Git提交超链接
+                    env.commitWebURL = gitlab.GetCommitWebURLByApi("${env.gitlabUserTokenCredentialsId}", "${env.projectId}", "${env.branchName}")
                     // 服务版本号（推荐定义："${branchName}-${commitId}"）
                     env.version = "${env.branchName}-${env.commitId}"
                     // 服务访问的域名
@@ -66,7 +70,7 @@ pipeline {
                     env.namespace = "${env.buName}-${env.productName}-${env.envList}"
 
                     // 修改Jenkins构建描述
-                    currentBuild.description = """ branchName：${env.branchName} \n commitId：${env.commitId} \n namespace：${env.namespace} \n domainName：${env.domainName} """
+                    currentBuild.description = """ branchName：${env.branchName} \n namespace：${env.namespace} \n commitId：[${env.commitId}](${env.commitWebURL}) \n domainName： \n ${env.domainName} """
                     // 修改Jenkins构建名称
                     currentBuild.displayName = "${env.version}"
                 }
@@ -162,12 +166,14 @@ pipeline {
         }
         success {
             script {
-                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+//                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
             }
         }
         failure {
             script {
-                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+//                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
             }
         }
     }

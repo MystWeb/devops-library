@@ -68,23 +68,31 @@ def dingTalkNotice(dingTalkTokenCredentialsId) {
 /**
  * 钉钉通知-Plugin
  * 插件链接：https://plugins.jenkins.io/dingding-notifications
- * 参考链接：https://www.jianshu.com/p/563db03e1ed9
+ * 参考链接：https://www.jianshu.com/p/563db03e1ed9、
+ * https://open.dingtalk.com/document/orgapp/faq-robot#afd23bb55em7r
+ * 注意：Jenkins|系统管理|钉钉|钉钉全局配置|机器人（新增）配置后才会有DingTalkRobotId！
  */
 def dingTalkPluginNotice(dingTalkRobotId) {
     // Jenkins DingTalk插件的钉钉通知代码
     withCredentials([string(credentialsId: "${dingTalkRobotId}", variable: 'DINGTALK_ROBOT_ID')]) {
+        def color = "${currentBuild.currentResult}" == 'SUCCESS' ? 'green' : "${currentBuild.currentResult}" == 'FAILURE' ? 'red' : 'yellow'
+        def newDescription = "${currentBuild.description}".replaceAll("\n", " \n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")
+        println("description：${currentBuild.description} \n newDescription：${newDescription}")
         dingtalk robot: "${DINGTALK_ROBOT_ID}",
                 type: "MARKDOWN",
-                title: """ ["${env.JOB_NAME}"]("${env.BUILD_URL}") """,
-                when: ['SUCCESS', 'FAILURE', 'UNSTABLE'],
+                // 首屏会话 透出的展示内容
+                title: "Jenkins 钉钉通知 - [${env.JOB_NAME}](${env.JOB_URL})",
+                // 图片 URL（LINK 类型的消息）
                 picUrl: 'https://www.jenkins.io/images/logos/cute/cute.png',
-                text: ["""
-                ## Jenkins 钉钉通知
-                - 任务：["${currentBuild.displayName}"]("${env.BUILD_URL}")
-                - 状态：<font color="${currentBuild.currentResult}" == 'SUCCESS' ? 'green' : "${currentBuild.currentResult}" == 'FAILURE' ? 'red' : 'yellow' >"${currentBuild.currentResult}"</font>
-                - 持续时间："${currentBuild.durationString}"
-                - 执行人："${env.BUILD_USER}"
-                """],
+                text: [
+                        "### Jenkins JOB：[${env.JOB_NAME}](${env.JOB_URL})",
+                        "---",
+                        "- 任务：[${currentBuild.displayName}](${env.BUILD_URL})",
+                        "- 状态：<font color=${color}>${currentBuild.currentResult}</font>",
+                        "- 持续时间：${currentBuild.durationString}".split("and counting")[0],
+                        "- 执行人：${currentBuild.buildCauses.shortDescription}",
+                        "- 描述：${newDescription}"
+                ],
                 atAll: false
     }
 }
