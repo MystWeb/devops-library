@@ -15,6 +15,7 @@ def gitlab = new GitLab()
 def artifact = new Artifact()
 def docker = new Docker()
 def kubernetes = new Kubernetes()
+def projectCustom = new ProjectCustom()
 
 // 流水线
 pipeline {
@@ -77,8 +78,13 @@ pipeline {
                     env.dingTalkRebotIdCredentialsId = "5213e392-d78e-4a9a-a37e-91f394309df1"
                     // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_URL，users：devops）
                     env.gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
+                    
                     // Git项目Id
-                    env.projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${env.serviceName}")
+                    env.projectId = projectCustom.getCustomProjectIdByProjectName("${env.serviceName}")
+                    if ("${env.projectId}" == "null") {
+                        env.projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${env.serviceName}")
+                    }
+                    println("projectId：${env.projectId}")
 
                     // 修改Jenkins构建描述
                     currentBuild.description = """ branchName：${env.branchName} \n commitId：${env.commitId} """

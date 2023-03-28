@@ -15,6 +15,7 @@ def notice = new Notice()
 def gitlab = new GitLab()
 def kubernetes = new Kubernetes()
 def projectCustom = new ProjectCustom()
+
 pipeline {
     agent {
         label "k8s"

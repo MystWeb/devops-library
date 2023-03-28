@@ -8,10 +8,18 @@ LABEL maintainer="77784423@qq.com"
 COPY --from=hengyunabc/arthas:latest /opt/arthas /opt/arthas
 
 # Custom Param，参数说明：https://www.cnblogs.com/liaojie970/p/8677124.html
+# JAVA 8 Optimization
+#ENV JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom \
+#  -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005 \
+#  -XX:+PrintFlagsFinal -XX:+UnlockExperimentalVMOptions -XX:+CrashOnOutOfMemoryError \
+#  -Xms512m -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m "
+# JAVA 11 Optimization 
 ENV JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom \
   -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5005 \
-  -XX:+PrintFlagsFinal -XX:+UnlockExperimentalVMOptions  \
-  -Xms1024m -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m "
+  -XX:+PrintFlagsFinal -XX:+UnlockExperimentalVMOptions -XX:+CrashOnOutOfMemoryError \
+  -Xms512m -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m \
+  -XX:+UseZGC -XX:MaxRAMPercentage=75"
+
 ARG fileName
 ENV fileName=${fileName}
 ARG filePath

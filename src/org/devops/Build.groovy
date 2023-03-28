@@ -14,7 +14,7 @@ def MavenBuild() {
  * Maven构建：跳过PMD、CheckStyle、Test检查
  */
 def MavenBuildSkipTest() {
-    sh "mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests"
+    sh "mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true"
 }
 
 /**
