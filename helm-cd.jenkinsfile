@@ -2,12 +2,7 @@
 @Library("mylib@main") _
 
 // 导入库
-
-import org.devops.Checkout
-import org.devops.GitLab
-import org.devops.Kubernetes
-import org.devops.Notice
-import org.devops.ProjectCustom
+import org.devops.*
 
 // New实例化
 def checkout = new Checkout()
@@ -35,6 +30,17 @@ pipeline {
 //        string defaultValue: '80', description: '注意：服务监听的端口号', name: 'port'
     }
 
+    environment {
+        // GitLab用户密钥访问凭据Id：id_ed25519 (GitLab-Enterprise-私钥文件（192.168.100.150:/root/.ssh/id_ed25519）)
+        gitlabKeysCredentialsId = "7f714471-562a-4ddd-884b-186f90556a9a"
+        // DingTalk-robot-token（Jenkins钉钉群聊）
+        dingTalkTokenCredentialsId = "8c6083c7-e1c2-47c0-9367-b67a9469bcd5"
+        // DingTalk-robot-id（Jenkins钉钉群聊）
+        dingTalkRebotIdCredentialsId = "5213e392-d78e-4a9a-a37e-91f394309df1"
+        // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_Edition_URL，users：devops）
+        gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
+    }
+
     stages {
         stage("Global") {
             steps {
@@ -47,31 +53,35 @@ pipeline {
                     env.productName = "${JOB_NAME}".split('-')[1]
                     // 服务/项目名称
                     env.serviceName = "${JOB_NAME}".split('_')[0]
-                    // DingTalk-robot-token（Jenkins钉钉群聊）
-                    env.dingTalkTokenCredentialsId = "8c6083c7-e1c2-47c0-9367-b67a9469bcd5"
-                    // DingTalk-robot-id（Jenkins钉钉群聊）
-                    env.dingTalkRebotIdCredentialsId = "5213e392-d78e-4a9a-a37e-91f394309df1"
-                    // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_Edition_URL，users：devops）
-                    env.gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
+
                     // Git项目Id
                     env.projectId = projectCustom.getProjectIdByProjectName("${env.serviceName}")
                     if ("${env.projectId}" == "null") {
                         env.projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${env.serviceName}")
                     }
                     println("projectId：${env.projectId}")
+
                     // Git提交ID
-                    env.commitId = gitlab.GetShortCommitIdByApi("${env.gitlabUserTokenCredentialsId}", "${env.projectId}", "${env.branchName}")
+                    env.commitId = gitlab.GetShortCommitIdByApi("${env.gitlabUserTokenCredentialsId}", "${env.projectId}", "${params.branchName}")
                     // Git提交超链接
-                    env.commitWebURL = gitlab.GetCommitWebURLByApi("${env.gitlabUserTokenCredentialsId}", "${env.projectId}", "${env.branchName}")
+                    env.commitWebURL = gitlab.GetCommitWebURLByApi("${env.gitlabUserTokenCredentialsId}", "${env.projectId}", "${params.branchName}")
                     // 服务版本号（推荐定义："${branchName}-${commitId}"）
-                    env.version = "${env.branchName}-${env.commitId}"
+                    env.version = "${params.branchName}-${env.commitId}"
+
                     // 服务访问的域名
-                    env.domainName = "${env.domainName}.${env.envList}"
+                    accessDomainName = projectCustom.getAccessDomainName("${params.domainName}")
+                    if ("${accessDomainName}" == "null") {
+                        env.accessDomainName = "${params.domainName}.${params.envList}"
+                    } else {
+                        env.accessDomainName = "${accessDomainName}.${params.envList}"
+                    }
+                    env.domainName = "${params.domainName}.${params.envList}"
+
                     // 服务部署的命名空间
-                    env.namespace = "${env.buName}-${env.productName}-${env.envList}"
+                    env.namespace = "${env.buName}-${env.productName}-${params.envList}"
 
                     // 修改Jenkins构建描述
-                    currentBuild.description = """ branchName：${env.branchName} \n namespace：${env.namespace} \n commitId：[${env.commitId}](${env.commitWebURL}) \n domainName： \n ${env.domainName} """
+                    currentBuild.description = """ branchName：${params.branchName} \n namespace：${env.namespace} \n commitId：[${env.commitId}](${env.commitWebURL}) \n domainName： \n ${env.domainName} \n accessDomainName：${env.accessDomainName} """
                     // 修改Jenkins构建名称
                     currentBuild.displayName = "${env.version}"
                 }
@@ -82,11 +92,9 @@ pipeline {
             steps {
                 script {
                     println("Checkout")
-                    // GitLab访问凭据Id：id_ed25519 (GitLab-Enterprise-私钥文件（192.168.100.150:/root/.ssh/id_ed25519）)
-                    env.credentialsId = "7f714471-562a-4ddd-884b-186f90556a9a"
                     sh "[ -d ${env.namespace} ] || mkdir ${env.namespace}"
                     ws("${WORKSPACE}/${env.namespace}") {
-                        checkout.GetCode("${env.helmSrcUrl}", "${env.helmBranchName}", "${env.credentialsId}")
+                        checkout.GetCode("${params.helmSrcUrl}", "${params.helmBranchName}", "${env.gitlabKeysCredentialsId}")
                     }
                 }
             }
@@ -100,13 +108,9 @@ pipeline {
                     // Git模板文件路径：项目服务名称_Helm/values.yaml
                     filePath = "${env.namespace}/${env.serviceName}/${fileName}"
                     // 项目定制参数
-                    Map projectParamsMap = projectCustom.getProjectParamsMap("${env.envList}")
+                    Map projectParamsMap = projectCustom.getProjectParamsMap("${params.envList}")
                     // Kubernetes发布模板文件内容替换
-                    if (projectParamsMap == null) {
-                        kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}"/*, "${env.port}"*/)
-                    } else {
-                        kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}"/*, "${env.port}"*/, projectParamsMap)
-                    }
+                    kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.accessDomainName}", /*"${env.port}",*/ projectParamsMap)
                     println("projectParamsMap：${projectParamsMap}")
                 }
             }

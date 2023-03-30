@@ -94,37 +94,28 @@ def HelmReleaseTemplateFileReplaceAndConvertToBase64(fileName, fileData, imageNa
 /**
  * Kubernetes发布模板文件内容替换（CD）
  * @param filePath Git模板文件路径：项目服务名称_Helm/values.yaml
- * @param domainName 访问域名
- * @param port 端口号
- * 注意：writeYaml data: yamlData 变量值不可以加"${yamlData}"，否则会丢失换行符且文本开头及末尾增加单引号：'
- */
-def HelmReleaseTemplateFileReplace(filePath, domainName/*, port*/) {
-    // 替换模板文件内容
-    yamlData = readYaml file: "${filePath}"
-    yamlData.ingress.hosts[0].host = "${domainName}"
-//    yamlData.service.port = "${port}"
-    // 根据文件内容生成新文件
-    writeYaml charset: "UTF-8", overwrite: "true", file: "${filePath}", data: yamlData
-    sh "cat ${filePath}"
-}
-
-/**
- * Kubernetes发布模板文件内容替换（CD）
- * @param filePath Git模板文件路径：项目服务名称_Helm/values.yaml
- * @param domainName 访问域名
+ * @param domainName 服务访问域名
+ * @param accessDomainName 应用访问域名（前后端分离项目）
  * @param port 端口号
  * @param projectParamsMap 项目参数
  * 注意：writeYaml data: yamlData 变量值不可以加"${yamlData}"，否则会丢失换行符且文本开头及末尾增加单引号：'
  */
-def HelmReleaseTemplateFileReplace(filePath, domainName, /*port,*/ Map projectParamsMap) {
+def HelmReleaseTemplateFileReplace(filePath, domainName, accessDomainName, /*port,*/ Map projectParamsMap) {
     // 替换模板文件内容
     yamlData = readYaml file: "${filePath}"
     yamlData.ingress.hosts[0].host = "${domainName}"
-    //yamlData.service[0].port = "${port}"
-    /*for (projectParams in projectParamsMap) {
-        yamlData."${projectParams.key}" = "${projectParams.value}"
-    }*/
-    projectParamsMap.each { key, value -> yamlData."${key}" = "${value}" }
+    if (projectParamsMap != null) {
+        //yamlData.service[0].port = "${port}"
+        /*for (projectParams in projectParamsMap) {
+            yamlData."${projectParams.key}" = "${projectParams.value}"
+        }*/
+        projectParamsMap.each { key, value -> yamlData."${key}" = "${value}" }
+    }
+    if (domainName != accessDomainName) {
+        println("accessDomainName Updates！")
+        yamlData.ingress.hosts[1].host = "${accessDomainName}"
+    }
+
     // 根据文件内容生成新文件
     writeYaml charset: "UTF-8", overwrite: "true", file: "${filePath}", data: yamlData
     sh "cat ${filePath}"
