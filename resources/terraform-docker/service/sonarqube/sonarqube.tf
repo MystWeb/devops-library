@@ -9,7 +9,7 @@
 # Pull image
 resource "docker_image" "sonarqube" {
   # (String) The name of the Docker image, including any tags or SHA256 repo digests.
-  name         = "sonarqube:9.8-community"
+  name         = "sonarqube:9.9-community"
   # (Boolean) If true, then the Docker image won't be deleted on destroy operation.
   # If this is false, it will delete the image from the docker local storage on destroy operation.
   keep_locally = true
@@ -18,7 +18,7 @@ resource "docker_image" "sonarqube" {
 locals {
   container_name         = "sonarqube"
   container_image        = docker_image.sonarqube.name
-  container_memory       = 12288
+  container_memory       = 4096
   container_memory_swap  = 15360
   # stop_timeout (Number) Timeout (in seconds) to stop a container.
   container_stop_timeout = 3600
@@ -27,7 +27,7 @@ locals {
     # 注意：同步postgresql容器IP：172.18.0.5
     "SONAR_JDBC_URL=jdbc:postgresql://172.18.0.5:5432/sonar",
     "SONAR_JDBC_USERNAME=postgres",
-    "SONAR_JDBC_PASSWORD=devops@2013"
+    "SONAR_JDBC_PASSWORD=proaim@2013"
   ]
   container_network = data.terraform_remote_state.network.outputs.network[0]["name"]
   container_ip      = "172.18.0.6"

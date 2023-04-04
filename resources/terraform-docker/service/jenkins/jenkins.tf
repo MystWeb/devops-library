@@ -21,7 +21,7 @@ resource "docker_image" "jenkins" {
 locals {
   container_name        = "jenkins"
   container_image       = docker_image.jenkins.name
-  container_memory      = 12288
+  container_memory      = 8192
   container_memory_swap = 15360
   container_user        = "root"
   container_privileged  = true

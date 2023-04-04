@@ -10,7 +10,7 @@
 # Pull image
 resource "docker_image" "gitlab" {
   # (String) The name of the Docker image, including any tags or SHA256 repo digests.
-  name         = "gitlab/gitlab-ce:15.10.0-ce.0"
+  name         = "gitlab/gitlab-ce:15.10.1-ce.0"
   # (Boolean) If true, then the Docker image won't be deleted on destroy operation.
   # If this is false, it will delete the image from the docker local storage on destroy operation.
   keep_locally = true
@@ -19,7 +19,7 @@ resource "docker_image" "gitlab" {
 locals {
   container_name        = "gitlab"
   container_image       = docker_image.gitlab.name
-  container_memory      = 12288
+  container_memory      = 8192
   container_memory_swap = 15360
   container_network     = data.terraform_remote_state.network.outputs.network[0]["name"]
   container_ip          = "172.18.0.2"

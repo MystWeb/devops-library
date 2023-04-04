@@ -8,7 +8,7 @@
 # Pull image
 resource "docker_image" "postgresql" {
   # (String) The name of the Docker image, including any tags or SHA256 repo digests.
-  name         = "postgres:15.1"
+  name         = "postgres:15.2"
   # (Boolean) If true, then the Docker image won't be deleted on destroy operation.
   # If this is false, it will delete the image from the docker local storage on destroy operation.
   keep_locally = true
@@ -17,10 +17,10 @@ resource "docker_image" "postgresql" {
 locals {
   container_name        = "postgresql"
   container_image       = docker_image.postgresql.name
-  container_memory      = 12288
+  container_memory      = 1024
   container_memory_swap = 15360
   container_env         = [
-    "POSTGRES_PASSWORD=devops@2013"
+    "POSTGRES_PASSWORD=proaim@2013"
   ]
   container_network = data.terraform_remote_state.network.outputs.network[0]["name"]
   container_ip      = "172.18.0.5"

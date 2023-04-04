@@ -13,7 +13,7 @@ resource "docker_image" "nexus" {
 locals {
   container_name        = "nexus"
   container_image       = docker_image.nexus.name
-  container_memory      = 12288
+  container_memory      = 4096
   container_memory_swap = 15360
   container_privileged  = true
   container_network     = data.terraform_remote_state.network.outputs.network[0]["name"]
