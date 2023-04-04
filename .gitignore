@@ -26,6 +26,6 @@ bin/
 .jqwik-database
 
 ### Terraform ###
-#.terraform
-#.terraform.lock.hcl
-#*.tfstate*
+.terraform
+.terraform.lock.hcl
+*.tfstate*
