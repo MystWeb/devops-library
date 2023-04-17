@@ -24,7 +24,7 @@ RUN npm cache clean --force \
   && tenant=${tenant} industry=${industry} npm run build \
   && echo "==> npm build done, tenant=${tenant}, industry=${industry}"
 
-# Start with a base image containing Java runtime
+# Start with a base image containing runtime
 FROM nginx:1.23.2
 # Add the built artifact
 COPY --from=BUILD /usr/src/app/dist /usr/share/nginx/html/

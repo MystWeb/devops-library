@@ -29,7 +29,7 @@ def NpmTest() {
 
 // Yarn测试
 def YarnTest() {
-    sh "yarn test "
+    sh "yarn test"
 }
 
 /**
@@ -58,6 +58,9 @@ def CodeTest(buildTool) {
             break;
         case "yarn":
             YarnTest()
+            break;
+        case "yarnSkip":
+            println("yarn Skip the unit tests")
             break;
         default:
 //            println("No such tools ... [maven/gradle/ant/go/npm/yarn]")

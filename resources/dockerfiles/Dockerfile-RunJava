@@ -25,6 +25,7 @@ ENV fileName=${fileName}
 ARG filePath
 ENV filePath=${filePath}
 ENV PARAMS=""
+RUN echo "Custom Param：fileName=${fileName}，filePath=${filePath}，PARAMS=${PARAMS}"
 
 # Add the built artifact
 COPY ${filePath}/${fileName} /opt/target/${fileName}

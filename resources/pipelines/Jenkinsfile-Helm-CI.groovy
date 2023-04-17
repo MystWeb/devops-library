@@ -2,7 +2,6 @@
 @Library("mylib@main") _
 
 // 导入库
-import org.devops.*
 
 // New实例化
 def checkout = new Checkout()
@@ -29,7 +28,7 @@ pipeline {
     parameters {
         string defaultValue: 'http://192.168.100.150/devops/devops-web-frontend.git', description: '仓库地址', name: 'srcUrl'
         string defaultValue: 'RELEASE-1.3.0', description: '分支名称', name: 'branchName'
-        choice choices: ['maven', 'custom', 'mavenSkip', 'gradle', 'ant', 'go', 'npm', 'npmSkip', 'yarn', 'yarnSkip'], description: '构建类型', name: 'buildType'
+        choice choices: ['maven', 'custom', 'mavenSkip', 'gradle', 'ant', 'go', 'npm', 'npmSkip', 'yarn'], description: '构建类型', name: 'buildType'
         string defaultValue: '', name: 'customBuild', description: '自定义构建命令（示例：mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests && mvn test）'
         choice choices: ['true', 'false'], description: '是否跳过代码扫描', name: 'skipSonar'
     }

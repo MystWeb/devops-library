@@ -49,7 +49,7 @@ def NpmBuild() {
  * Yarn构建
  */
 def YarnBuild() {
-    sh "yarn && yarn run build"
+    sh "npm cache clean --force && yarn && yarn run build"
 }
 
 /**
@@ -80,6 +80,9 @@ def CodeBuild(buildTool) {
             NpmBuild()
             break;
         case "yarn":
+            YarnBuild()
+            break;
+        case "yarnSkip":
             YarnBuild()
             break;
         default:

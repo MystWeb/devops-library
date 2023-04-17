@@ -2,7 +2,6 @@
 @Library("mylib@main") _
 
 // 导入库
-import org.devops.*
 
 // New实例化
 def checkout = new Checkout()
