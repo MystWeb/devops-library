@@ -107,17 +107,22 @@ pipeline {
             }
         }
 
-        /*stage("HealthCheck") {
+        stage("HealthCheck") {
             steps {
                 script {
                     // 注意：自定义域名需配置Hosts文件！
-                    result = sh returnStdout: true, script: """ curl "http://${env.domainName}/health" """ - "\n"
-                    if ("ok" == result) {
-                        println("Successful！")
+                    try {
+                        sleep(5)
+                        result = sh returnStdout: true, script: """ curl "http://${env.domainName}/health" """ - "\n"
+                        if ("ok" == result) {
+                            println("Successful！")
+                        }
+                    } catch (Exception e) {
+                        println(e)
                     }
                 }
             }
-        }*/
+        }
 
         stage("RollOut") {
             input {

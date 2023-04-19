@@ -76,13 +76,7 @@ def CodeBuild(buildTool) {
         case "npm":
             NpmBuild()
             break;
-        case "npmSkip":
-            NpmBuild()
-            break;
         case "yarn":
-            YarnBuild()
-            break;
-        case "yarnSkip":
             YarnBuild()
             break;
         default:

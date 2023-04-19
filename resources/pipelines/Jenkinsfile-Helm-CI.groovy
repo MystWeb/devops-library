@@ -28,14 +28,13 @@ pipeline {
     parameters {
         string defaultValue: 'http://192.168.100.150/devops/devops-web-frontend.git', description: '仓库地址', name: 'srcUrl'
         string defaultValue: 'RELEASE-1.3.0', description: '分支名称', name: 'branchName'
-        choice choices: ['maven', 'custom', 'mavenSkip', 'gradle', 'ant', 'go', 'npm', 'npmSkip', 'yarn'], description: '构建类型', name: 'buildType'
+        choice choices: ['maven', 'custom', 'mavenSkip', 'gradle', 'ant', 'go', 'npm', 'yarn'], description: '构建类型', name: 'buildType'
         string defaultValue: '', name: 'customBuild', description: '自定义构建命令（示例：mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests && mvn test）'
         choice choices: ['true', 'false'], description: '是否跳过代码扫描', name: 'skipSonar'
+        choice choices: ['true', 'false'], description: '是否跳过代码扫描', name: 'skipTests'
     }
 
     environment {
-        // GitLab用户密钥访问凭据Id：id_ed25519 (GitLab-Enterprise-私钥文件（192.168.100.150:/root/.ssh/id_ed25519）)
-        gitlabKeysCredentialsId = "7f714471-562a-4ddd-884b-186f90556a9a"
         // 制品仓库地址
         artifactRegistry = "192.168.100.150:8081"
         // 制品仓库访问凭据Id：Nexus-admin-账号密码（192.168.100.150:8081）
@@ -52,6 +51,8 @@ pipeline {
         dingTalkTokenCredentialsId = "8c6083c7-e1c2-47c0-9367-b67a9469bcd5"
         // DingTalk-robot-id（Jenkins钉钉群聊）
         dingTalkRebotIdCredentialsId = "5213e392-d78e-4a9a-a37e-91f394309df1"
+        // GitLab用户密钥访问凭据Id：id_ed25519 (GitLab-Enterprise-私钥文件（192.168.100.150:/root/.ssh/id_ed25519）)
+        gitlabKeysCredentialsId = "7f714471-562a-4ddd-884b-186f90556a9a"
         // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_Edition_URL，users：devops）
         gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
     }
@@ -71,14 +72,10 @@ pipeline {
                 script {
                     // 任务名称截取构建类型（任务名称示例：devops-maven-service）
 //                    env.buildType = "${JOB_NAME}".split("-")[1]
-                    // Git提交ID
-                    env.commitId = gitlab.GetShortCommitIdByEightDigit()
                     // JOB任务前缀（业务名称/组名称）
                     env.buName = "${JOB_NAME}".split('-')[0]
                     // 服务/项目名称
                     env.serviceName = "${JOB_NAME}".split('_')[0]
-                    // 服务版本号（推荐定义："${branchName}-${commitId}"）
-                    env.version = "${params.branchName}-${env.commitId}"
 
                     // Git项目Id
                     env.projectId = projectCustom.getProjectIdByProjectName("${env.serviceName}")
@@ -86,6 +83,11 @@ pipeline {
                         env.projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${env.serviceName}")
                     }
                     println("projectId：${env.projectId}")
+
+                    // Git提交ID
+                    env.commitId = gitlab.GetShortCommitIdByEightDigit()
+                    // 服务版本号（推荐定义："${branchName}-${commitId}"）
+                    env.version = "${params.branchName}-${env.commitId}"
 
                     // 修改Jenkins构建描述
                     currentBuild.description = """ branchName：${params.branchName} \n commitId：${env.commitId} """
@@ -109,6 +111,9 @@ pipeline {
         }
 
         stage("UnitTest") {
+            when {
+                environment name: 'skipTests', value: 'false'
+            }
             steps {
                 script {
                     if ("${env.buildType}" == "custom") {
@@ -153,7 +158,7 @@ pipeline {
                         // 上传制品
                         artifact.PushArtifactByApi("${env.artifactRegistry}", "${env.artifactCredentialsId}", "${env.artifactRepository}",
                                 "${env.buName}/${env.serviceName}/${env.version}", "${env.buildType}", "${env.filePath}", "${env.newFileName}")
-                    } else if ("${env.buildType}" == "npm" || "${env.buildType}" == "npmSkip" || "${env.buildType}" == "yarn" || "${env.buildType}" == "yarnSkip") {
+                    } else if ("${env.buildType}" == "npm" || "${env.buildType}" == "yarn") {
                         env.filePath = "dist"
                         fileSuffix = "tar.gz"
                         env.newFileName = "${env.serviceName}-${env.version}.${fileSuffix}"

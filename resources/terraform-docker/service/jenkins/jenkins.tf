@@ -8,11 +8,12 @@
 # Jenkins邮件插件：https://plugins.jenkins.io/email-ext/
 # Pipeline工具箱：https://plugins.jenkins.io/pipeline-utility-steps/
 # HttpRequest：https://plugins.jenkins.io/http_request
+# 钉钉通知：https://plugins.jenkins.io/dingding-notifications/
 
 # Pull image
 resource "docker_image" "jenkins" {
   # (String) The name of the Docker image, including any tags or SHA256 repo digests.
-  name         = "jenkins/jenkins:2.387.1-lts-jdk11"
+  name         = "jenkins/jenkins:2.387.2-lts-jdk11"
   # (Boolean) If true, then the Docker image won't be deleted on destroy operation.
   # If this is false, it will delete the image from the docker local storage on destroy operation.
   keep_locally = true
@@ -21,7 +22,7 @@ resource "docker_image" "jenkins" {
 locals {
   container_name        = "jenkins"
   container_image       = docker_image.jenkins.name
-  container_memory      = 8192
+  container_memory      = 12288
   container_memory_swap = 15360
   container_user        = "root"
   container_privileged  = true

@@ -23,14 +23,18 @@ pipeline {
 
     options {
         skipDefaultCheckout true
-        buildDiscarder logRotator(daysToKeepStr: '30', numToKeepStr: '30')
+        buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '90')
     }
 
     parameters {
-        string defaultValue: 'http://192.168.100.150/devops/devops-service.git', description: '仓库地址', name: 'srcUrl'
-        string defaultValue: 'RELEASE-1.2.0', description: '分支名称', name: 'branchName'
-        choice choices: ['maven', 'custom', 'mavenSkip', 'gradle', 'ant', 'go', 'npm', 'yarn'], description: '构建类型', name: 'buildType'
-        string defaultValue: '', name: 'customBuild', description: '自定义构建命令（示例：mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests && mvn test）'
+        // 插件BUG：defaultValue的值必须为存在的分支或标签，构建成功一次后，才可获取全部远程分支与标签！
+        /*gitParameter(branchFilter: 'origin/(.*)', tagFilter: "*", defaultValue: 'v1.3.0_daily_build', name: 'branchName',
+                type: 'PT_BRANCH_TAG', quickFilterEnabled: true, sortMode: 'DESCENDING_SMART', listSize: '5')*/
+        string defaultValue: 'v1.3.0_daily_build', description: '注意：选择应用发布分支', name: 'branchName'
+        choice choices: ['dev01', 'dev02', 'test01', 'test02'], description: '环境列表', name: 'envList'
+        choice choices: ['devops.web.backend'], description: '服务访问的域名（注意：域名末尾会追加环境选择：domainName.dev01）', name: 'domainName'
+        /*choice choices: ['zhenhai', 'yulin', 'hnlh', 'enenghua', 'tai2', 'yc', 'wss', 'beilun', 'yanhua'],
+                description: '租户列表', name: 'tenant'*/
         choice choices: ['true', 'false'], description: '是否跳过代码扫描', name: 'skipSonar'
         choice choices: ['true', 'false'], description: '是否跳过单元测试', name: 'skipTests'
     }
@@ -56,6 +60,16 @@ pipeline {
         dingTalkRebotIdCredentialsId = "5213e392-d78e-4a9a-a37e-91f394309df1"
         // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_Edition_URL，users：devops）
         gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
+
+        // GitLab代码仓库地址
+        srcUrl = "http://192.168.100.150/devops/devops-web-backend.git"
+        // GitLab项目构建工具类型
+        buildType = "mavenSkip"
+
+        // 注意：Helm Chart仓库地址
+        helmSrcUrl = "devops/devops-k8s-deployment.git"
+        // 注意：Helm Chart分支名称
+        helmBranchName = "main"
     }
 
     stages {
@@ -63,7 +77,7 @@ pipeline {
             steps {
                 script {
                     println("Checkout")
-                    checkout.GetCode("${params.srcUrl}", "${params.branchName}", "${env.gitlabKeysCredentialsId}")
+                    checkout.GetCode("${env.srcUrl}", "${params.branchName}", "${env.gitlabKeysCredentialsId}")
                 }
             }
         }
@@ -72,15 +86,13 @@ pipeline {
             steps {
                 script {
                     // 任务名称截取构建类型（任务名称示例：devops-maven-service）
-//                    params.buildType = "${JOB_NAME}".split("-")[1]
-                    // Git提交ID
-                    env.commitId = gitlab.GetShortCommitIdByEightDigit()
+//                    env.buildType = "${JOB_NAME}".split("-")[1]
                     // JOB任务前缀（业务名称/组名称）
                     env.buName = "${JOB_NAME}".split('-')[0]
+                    // 产品名称
+                    env.productName = "${JOB_NAME}".split('-')[1]
                     // 服务/项目名称
                     env.serviceName = "${JOB_NAME}".split('_')[0]
-                    // 服务版本号（推荐定义："${branchName}-${commitId}"）
-                    env.version = "${params.branchName}-${env.commitId}"
 
                     // Git项目Id
                     env.projectId = projectCustom.getProjectIdByProjectName("${env.serviceName}")
@@ -89,8 +101,27 @@ pipeline {
                     }
                     println("projectId：${env.projectId}")
 
+                    // Git提交ID
+                    env.commitId = gitlab.GetShortCommitIdByEightDigit()
+                    // Git提交超链接
+                    env.commitWebURL = gitlab.GetCommitWebURLByApi("${env.gitlabUserTokenCredentialsId}", "${env.projectId}", "${params.branchName}")
+                    // 服务版本号（推荐定义："${branchName}-${commitId}"）
+                    env.version = "${params.branchName}-${env.commitId}"
+
+                    // 服务访问的域名
+                    accessDomainName = projectCustom.getAccessDomainName("${params.domainName}")
+                    if ("${accessDomainName}" == "null") {
+                        env.accessDomainName = "${params.domainName}.${params.envList}"
+                    } else {
+                        env.accessDomainName = "${accessDomainName}.${params.envList}"
+                    }
+                    env.domainName = "${params.domainName}.${params.envList}"
+
+                    // 服务部署的命名空间
+                    env.namespace = "${env.buName}-${env.productName}-${params.envList}"
+
                     // 修改Jenkins构建描述
-                    currentBuild.description = """ branchName：${params.branchName} \n commitId：${env.commitId} """
+                    currentBuild.description = """ branchName：${params.branchName} \n namespace：${env.namespace} \n commitId：[${env.commitId}](${env.commitWebURL}) \n domainName： \n ${env.domainName} \n accessDomainName：${env.accessDomainName} """
                     // 修改Jenkins构建名称
                     currentBuild.displayName = "${env.version}"
                 }
@@ -101,11 +132,7 @@ pipeline {
             steps {
                 script {
                     println("Build")
-                    if (null == "${params.customBuild}" || "${params.customBuild}".trim().length() <= 0) {
-                        build.CodeBuild("${params.buildType}")
-                    } else {
-                        custom.CustomCommands("${params.customBuild}")
-                    }
+                    build.CodeBuild("${env.buildType}")
                 }
             }
         }
@@ -116,12 +143,8 @@ pipeline {
             }
             steps {
                 script {
-                    if ("${params.buildType}" == "custom") {
-                        println("构建类型为：custom，跳过UnitTest阶段，如需单元测试请使用符号：&& 拼接命令")
-                    } else {
-                        println("UnitTest")
-                        unitTest.CodeTest("${params.buildType}")
-                    }
+                    println("UnitTest")
+                    unitTest.CodeTest("${env.buildType}")
                 }
             }
         }
@@ -188,22 +211,21 @@ pipeline {
             }
         }
 
-        stage("K8sReleaseFile") {
+        stage("HelmReleaseFile_CI") {
             steps {
                 script {
                     // Git项目Id（devops-k8s-deployment）
                     k8sProjectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "devops", "devops-k8s-deployment")
                     // Git文件模板名称
-                    fileName = "k8s-deployments-template.yaml"
-                    // Git上传文件路径：项目服务名称/版本号.yaml
-                    filePath = "${env.serviceName}%2fNative%2f${env.version}.yaml"
+                    fileName = "values.yaml"
+                    // Git上传文件路径：项目服务名称/values.yaml
+                    filePath = "${env.serviceName}%2f${fileName}"
                     // 下载Kubernetes部署模板文件
                     fileData = gitlab.GetRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}",
-                            "${fileName}", "main")
-                    // imagePath：镜像仓库地址/镜像名称:镜像标签
-                    imagePath = "${env.imageRegistry}/${env.imageName}:${env.version}"
-                    // Kubernetes发布模板文件内容替换并转换Base64
-                    base64Content = kubernetes.K8sReleaseTemplateFileReplaceAndConvertToBase64("${fileName}", "${fileData}", "${imagePath}")
+                            "${filePath}", "${env.helmBranchName}")
+                    // Kubernetes发布模板文件内容替换并转换Base64（imagePath：镜像仓库地址/镜像名称:镜像标签）
+                    base64Content = kubernetes.HelmReleaseTemplateFileReplaceAndConvertToBase64("${fileName}", "${fileData}",
+                            "${env.imageRegistry}/${env.imageName}", "${env.version}")
 
                     // 上传替换后的版本文件（新建文件或者更新文件）
                     // gitlab文件内容变更（URL编码转义符： %2f = / ）
@@ -211,6 +233,59 @@ pipeline {
                         gitlab.CreateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "main", "${filePath}", "${base64Content}")
                     } catch (e) {
                         gitlab.UpdateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "main", "${filePath}", "${base64Content}")
+                    }
+                }
+            }
+        }
+
+        stage("CompleteHelmReleaseFile") {
+            steps {
+                script {
+                    println("Checkout")
+                    sh "[ -d ${env.namespace} ] || mkdir ${env.namespace}"
+                    ws("${WORKSPACE}/${env.namespace}") {
+                        checkout.GetCode("${env.helmSrcUrl}", "${env.helmBranchName}", "${env.gitlabKeysCredentialsId}")
+                    }
+                }
+            }
+        }
+
+        stage("HelmReleaseFile_CD") {
+            steps {
+                script {
+                    // Git文件模板名称
+                    fileName = "values.yaml"
+                    // Git模板文件路径：项目服务名称_Helm/values.yaml
+                    filePath = "${env.namespace}/${env.serviceName}/${fileName}"
+                    // 项目定制参数
+                    Map projectParamsMap = projectCustom.getProjectParamsMap("${params.envList}")
+                    // Kubernetes发布模板文件内容替换
+                    kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.accessDomainName}", /*"${env.port}",*/ projectParamsMap)
+                    println("projectParamsMap：${projectParamsMap}")
+                }
+            }
+        }
+
+        stage("HelmDeploy") {
+            steps {
+                script {
+                    kubernetes.HelmDeploy("${env.namespace}", "${env.namespace}/${env.serviceName}", "${env.serviceName}")
+                }
+            }
+        }
+
+        stage("HealthCheck") {
+            steps {
+                script {
+                    // 注意：自定义域名需配置Hosts文件！
+                    try {
+                        sleep(5)
+                        result = sh returnStdout: true, script: """ curl "http://${env.domainName}/health" """ - "\n"
+                        if ("ok" == result) {
+                            println("Successful！")
+                        }
+                    } catch (Exception e) {
+                        println(e)
                     }
                 }
             }
