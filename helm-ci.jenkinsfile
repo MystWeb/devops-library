@@ -56,6 +56,8 @@ pipeline {
         gitlabKeysCredentialsId = "7f714471-562a-4ddd-884b-186f90556a9a"
         // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_Edition_URL，users：devops）
         gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
+        // 注意：Helm Chart分支名称
+        helmBranchName = "main"
     }
 
     stages {
@@ -200,7 +202,7 @@ pipeline {
                     filePath = "${env.serviceName}%2f${fileName}"
                     // 下载Kubernetes部署模板文件
                     fileData = gitlab.GetRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}",
-                            "${filePath}", "main")
+                            "${filePath}", "${env.helmBranchName}")
                     // Kubernetes发布模板文件内容替换并转换Base64（imagePath：镜像仓库地址/镜像名称:镜像标签）
                     base64Content = kubernetes.HelmReleaseTemplateFileReplaceAndConvertToBase64("${fileName}", "${fileData}",
                             "${env.imageRegistry}/${env.imageName}", "${env.version}")
@@ -208,9 +210,9 @@ pipeline {
                     // 上传替换后的版本文件（新建文件或者更新文件）
                     // gitlab文件内容变更（URL编码转义符： %2f = / ）
                     try {
-                        gitlab.CreateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "main", "${filePath}", "${base64Content}")
+                        gitlab.CreateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "${env.helmBranchName}", "${filePath}", "${base64Content}")
                     } catch (e) {
-                        gitlab.UpdateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "main", "${filePath}", "${base64Content}")
+                        gitlab.UpdateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "${env.helmBranchName}", "${filePath}", "${base64Content}")
                     }
                 }
             }

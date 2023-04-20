@@ -32,6 +32,7 @@ pipeline {
                 type: 'PT_BRANCH_TAG', quickFilterEnabled: true, sortMode: 'DESCENDING_SMART', listSize: '5')*/
         string defaultValue: 'v1.3.0_daily_build', description: '注意：选择应用发布分支', name: 'branchName'
         choice choices: ['dev01', 'dev02', 'test01', 'test02'], description: '环境列表', name: 'envList'
+        choice choices: ['256Mi', '512Mi', '1024Mi', '2048Mi', '4096Mi'], description: '最大内存', name: 'memory'
         choice choices: ['devops.web.frontend'], description: '服务访问的域名（注意：域名末尾会追加环境选择：domainName.dev01）', name: 'domainName'
         /*choice choices: ['zhenhai', 'yulin', 'hnlh', 'enenghua', 'tai2', 'yc', 'wss', 'beilun', 'yanhua'],
                 description: '租户列表', name: 'tenant'*/
@@ -230,9 +231,9 @@ pipeline {
                     // 上传替换后的版本文件（新建文件或者更新文件）
                     // gitlab文件内容变更（URL编码转义符： %2f = / ）
                     try {
-                        gitlab.CreateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "main", "${filePath}", "${base64Content}")
+                        gitlab.CreateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "${env.helmBranchName}", "${filePath}", "${base64Content}")
                     } catch (e) {
-                        gitlab.UpdateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "main", "${filePath}", "${base64Content}")
+                        gitlab.UpdateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "${env.helmBranchName}", "${filePath}", "${base64Content}")
                     }
                 }
             }
@@ -260,7 +261,7 @@ pipeline {
                     // 项目定制参数
                     Map projectParamsMap = projectCustom.getProjectParamsMap("${params.envList}")
                     // Kubernetes发布模板文件内容替换
-                    kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.accessDomainName}", /*"${env.port}",*/ projectParamsMap)
+                    kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.accessDomainName}", "${params.memory}", projectParamsMap)
                     println("projectParamsMap：${projectParamsMap}")
                 }
             }
