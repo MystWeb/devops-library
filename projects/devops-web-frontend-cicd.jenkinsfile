@@ -33,9 +33,9 @@ pipeline {
         string defaultValue: 'v1.3.0_daily_build', description: '注意：选择应用发布分支', name: 'branchName'
         choice choices: ['dev01', 'dev02', 'test01', 'test02'], description: '环境列表', name: 'envList'
         choice choices: ['256Mi', '512Mi', '1024Mi', '2048Mi', '4096Mi'], description: '最大内存', name: 'memory'
+        choice choices: ['trinity', 'zhenhai', 'tai2', 'basf', 'yc', 'yulin', 'spc'],
+                description: '租户列表（定制化登录页，参数即将弃用！）', name: 'tenantList'
         choice choices: ['devops.web.frontend'], description: '服务访问的域名（注意：域名末尾会追加环境选择：domainName.dev01）', name: 'domainName'
-        /*choice choices: ['zhenhai', 'yulin', 'hnlh', 'enenghua', 'tai2', 'yc', 'wss', 'beilun', 'yanhua'],
-                description: '租户列表', name: 'tenant'*/
         choice choices: ['true', 'false'], description: '是否跳过代码扫描', name: 'skipSonar'
         choice choices: ['true', 'false'], description: '是否跳过单元测试', name: 'skipTests'
     }
@@ -93,7 +93,9 @@ pipeline {
                     // 产品名称
                     env.productName = "${JOB_NAME}".split('-')[1]
                     // 服务/项目名称
-                    env.serviceName = "${JOB_NAME}".split('_')[0]
+//                    env.serviceName = "${JOB_NAME}".split('_')[0]
+                    subName = "${JOB_NAME}".substring("${JOB_NAME}".indexOf('-') + 1) // 获取 - 后面的子字符串
+                    env.serviceName = "${subName}".replaceFirst(/_.*/, "") // 替换第一个 "_" 及后面的字符为空
 
                     // Git项目Id
                     env.projectId = projectCustom.getProjectIdByProjectName("${env.serviceName}")
@@ -133,7 +135,11 @@ pipeline {
             steps {
                 script {
                     println("Build")
-                    build.CodeBuild("${env.buildType}")
+//                    build.CodeBuild("${env.buildType}")
+                    CustomCommand = "npm cache clean --force" +
+                            " && yarn config set registry https://registry.npmmirror.com" +
+                            " && yarn && tenant=${params.tenantList} yarn run build"
+                    custom.CustomCommands("${CustomCommand}")
                 }
             }
         }

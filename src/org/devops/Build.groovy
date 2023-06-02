@@ -42,14 +42,14 @@ def GoBuild(configPath = "demo.go") {
  * Npm构建
  */
 def NpmBuild() {
-    sh "npm cache clean --force && npm install && npm run build"
+    sh "npm cache clean --force && npm config set registry https://registry.npmmirror.com && npm install && npm run build"
 }
 
 /**
  * Yarn构建
  */
 def YarnBuild() {
-    sh "npm cache clean --force && yarn && yarn run build"
+    sh "npm cache clean --force && yarn config set registry https://registry.npmmirror.com && yarn && yarn run build"
 }
 
 /**

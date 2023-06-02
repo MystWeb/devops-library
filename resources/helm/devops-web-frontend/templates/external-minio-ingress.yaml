@@ -1,0 +1,67 @@
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: proaimltd-trinity-refactor-frontend
+  namespace: proaimltd-trinity-test02
+  labels:
+    app.kubernetes.io/instance: proaimltd-trinity-refactor-frontend
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: proaimltd-trinity-refactor-frontend
+    app.kubernetes.io/version: 1.16.0
+    helm.sh/chart: proaimltd-trinity-refactor-frontend-0.1.0
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    meta.helm.sh/release-name: proaimltd-trinity-refactor-frontend
+    meta.helm.sh/release-namespace: proaimltd-trinity-test02
+  managedFields:
+    - manager: helm
+      operation: Update
+      apiVersion: networking.k8s.io/v1
+      fieldsType: FieldsV1
+    - manager: nginx-ingress-controller
+      operation: Update
+      apiVersion: networking.k8s.io/v1
+      subresource: status
+spec:
+  rules:
+    - host: trinity.frontend.test02
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: proaimltd-trinity-refactor-frontend
+                port:
+                  number: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: external-minio-service
+spec:
+  type: ExternalName
+  externalName: 192.168.100.138 # MinIO’s IP address
+  ports:
+    - name: web
+      port: 9000
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: external-minio-ingress
+    #annotations:
+  #nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /oss(/|$)(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: external-minio-service
+                port:
+                  name: web

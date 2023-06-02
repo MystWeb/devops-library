@@ -55,7 +55,9 @@ pipeline {
                     // 产品名称
                     env.productName = "${JOB_NAME}".split('-')[1]
                     // 服务/项目名称
-                    env.serviceName = "${JOB_NAME}".split('_')[0]
+//                    env.serviceName = "${JOB_NAME}".split('_')[0]
+                    subName = "${JOB_NAME}".substring("${JOB_NAME}".indexOf('-') + 1) // 获取 - 后面的子字符串
+                    env.serviceName = "${subName}".replaceFirst(/_.*/, "") // 替换第一个 "_" 及后面的字符为空
 
                     // Git项目Id
                     env.projectId = projectCustom.getProjectIdByProjectName("${env.serviceName}")

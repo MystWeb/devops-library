@@ -4,3 +4,4 @@ metadata:
   name: {{ .Chart.Name }}-configmap
 data:
   PARAMS: {{ .Values.PARAMS }}
+  TZ: "Asia/Shanghai"
