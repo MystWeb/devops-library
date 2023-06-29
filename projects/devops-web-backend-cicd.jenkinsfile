@@ -38,6 +38,7 @@ pipeline {
                 description: '租户列表', name: 'tenant'*/
         choice choices: ['true', 'false'], description: '是否跳过代码扫描', name: 'skipSonar'
         choice choices: ['true', 'false'], description: '是否跳过单元测试', name: 'skipTests'
+        choice choices: ['false', 'true'], description: '是否跳过CD', name: 'skipCD'
     }
 
     environment {
@@ -242,6 +243,9 @@ pipeline {
         }
 
         stage("CompleteHelmReleaseFile") {
+            when {
+                environment name: 'skipCD', value: 'false'
+            }
             steps {
                 script {
                     println("Checkout")
@@ -254,6 +258,9 @@ pipeline {
         }
 
         stage("HelmReleaseFile_CD") {
+            when {
+                environment name: 'skipCD', value: 'false'
+            }
             steps {
                 script {
                     // Git文件模板名称
@@ -270,6 +277,9 @@ pipeline {
         }
 
         stage("HelmDeploy") {
+            when {
+                environment name: 'skipCD', value: 'false'
+            }
             steps {
                 script {
                     kubernetes.HelmDeploy("${env.namespace}", "${env.namespace}/${env.serviceName}", "${env.serviceName}")
@@ -278,6 +288,9 @@ pipeline {
         }
 
         stage("HealthCheck") {
+            when {
+                environment name: 'skipCD', value: 'false'
+            }
             steps {
                 script {
                     // 注意：自定义域名需配置Hosts文件！

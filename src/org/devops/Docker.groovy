@@ -24,6 +24,9 @@ def DockerBuildAndPushImage(registry, credentialsId, imageName, imageTag, filePa
             
             # 上传镜像
             docker push ${registry}/${imageName}:${imageTag}
+
+            # 保存镜像
+            docker save ${registry}/${imageName}:${imageTag} -o ${env.serviceName}:${imageTag}.tar
             
             # 删除镜像
             sleep 5
