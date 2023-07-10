@@ -75,6 +75,13 @@ pipeline {
     }
 
     stages {
+
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
         stage("Checkout") {
             steps {
                 script {
@@ -314,10 +321,10 @@ pipeline {
     }
 
     post {
-        always {
+        /*always {
             // clean workspace build
             cleanWs()
-        }
+        }*/
         success {
             script {
 //                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")

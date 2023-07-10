@@ -27,6 +27,19 @@ def GetShortCommitIdByEightDigit() {
 }
 
 /**
+ * 通过Api获取CommitId
+ * @param credentialsId GitLab用户Token访问凭据Id
+ * @param projectId 项目id
+ * @param branchName 分支名称
+ */
+def GetCommitIdByApi(credentialsId, projectId, branchName) {
+    apiUrl = "projects/${projectId}/repository/branches/${branchName}"
+    response = GitLabRequest("${credentialsId}", "GET", "${apiUrl}")
+    response = readJSON text: response - "\n"
+    return response.commit.id - "\n"
+}
+
+/**
  * 通过Api获取Commit简短id
  * @param credentialsId GitLab用户Token访问凭据Id
  * @param projectId 项目id
