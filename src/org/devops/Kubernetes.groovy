@@ -97,11 +97,11 @@ def HelmReleaseTemplateFileReplaceAndConvertToBase64(fileName, fileData, imageNa
  * @param domainName 服务访问域名
  * @param accessDomainName 应用访问域名（前后端分离项目）
  * @param memory 最大内存
- * @param port 端口号
+ * @param replicaCount 副本数
  * @param projectParamsMap 项目参数
  * 注意：writeYaml data: yamlData 变量值不可以加"${yamlData}"，否则会丢失换行符且文本开头及末尾增加单引号：'
  */
-def HelmReleaseTemplateFileReplace(filePath, domainName, accessDomainName, memory, /*port,*/ Map projectParamsMap) {
+def HelmReleaseTemplateFileReplace(filePath, domainName, accessDomainName, memory, replicaCount, Map projectParamsMap) {
     // 替换模板文件内容
     yamlData = readYaml file: "${filePath}"
     yamlData.ingress.hosts[0].host = "${domainName}"
@@ -118,6 +118,7 @@ def HelmReleaseTemplateFileReplace(filePath, domainName, accessDomainName, memor
     }
 
     yamlData.resources.limits.memory = "${memory}"
+    yamlData.replicaCount = "${replicaCount}"
 
     // 根据文件内容生成新文件
     writeYaml charset: "UTF-8", overwrite: "true", file: "${filePath}", data: yamlData
