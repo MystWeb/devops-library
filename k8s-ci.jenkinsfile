@@ -187,10 +187,14 @@ pipeline {
         stage("DockerBuild") {
             steps {
                 script {
-                    // imageTag："${params.branchName}-${env.commitId}"
-                    env.imageName = "${env.buName}/${env.serviceName}"
-                    docker.DockerBuildAndPushImage("${env.imageRegistry}", "${env.imageRegistryCredentialsId}",
-                            "${env.imageName}", "${env.version}", "${env.filePath}", "${env.newFileName}")
+                    // 定义锁定资源的名称，例如：docker-images-lock
+                    def resourceLock = "docker-images-lock"
+                    lock(resource: resourceLock, inversePrecedence: true) {
+                        // imageTag："${params.branchName}-${env.commitId}"
+                        env.imageName = "${env.buName}/${env.serviceName}"
+                        docker.DockerBuildAndPushImage("${env.imageRegistry}", "${env.imageRegistryCredentialsId}",
+                                "${env.imageName}", "${env.version}", "${env.filePath}", "${env.newFileName}")
+                    }
                 }
             }
         }
