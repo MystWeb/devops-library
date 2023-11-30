@@ -7,21 +7,21 @@ def MavenBuild() {
     // 使用绝对路径的执行命令
 //    sh "/usr/local/apache-maven/bin/mvn clean package"
     // 配置环境变量的执行命令
-    sh "mvn clean package"
+    sh "mvn -v && mvn clean package"
 }
 
 /**
  * Maven构建：跳过PMD、CheckStyle、Test检查
  */
 def MavenBuildSkipTest() {
-    sh "mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true"
+    sh "mvn -v && mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true"
 }
 
 /**
  * Gradle构建
  */
 def GradleBuild() {
-    sh "gradle build"
+    sh "gradle -v && gradle build"
 }
 
 /**
@@ -35,21 +35,21 @@ def AntBuild(configPath = "./build.xml") {
  * Golang构建
  */
 def GoBuild(configPath = "demo.go") {
-    sh "go build ${configPath}"
+    sh "go version && go build ${configPath}"
 }
 
 /**
  * Npm构建
  */
 def NpmBuild() {
-    sh "npm cache clean --force && npm config set registry https://registry.npmmirror.com && npm install && npm run build"
+    sh "node -v && npm -v && npm cache clean --force && npm config set registry https://registry.npmmirror.com && npm install && npm run build"
 }
 
 /**
  * Yarn构建
  */
 def YarnBuild() {
-    sh "npm cache clean --force && yarn config set registry https://registry.npmmirror.com && yarn && yarn run build"
+    sh "npm cache clean --force && node -v && npm -v && yarn -v && yarn config set registry https://registry.npmmirror.com && yarn && yarn run build"
 }
 
 /**
