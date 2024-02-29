@@ -27,12 +27,14 @@ pipeline {
     }
 
     parameters {
-        // 插件BUG：defaultValue的值必须为存在的分支或标签，构建成功一次后，才可获取全部远程分支与标签！
-        /*gitParameter(branchFilter: 'origin/(.*)', tagFilter: "*", defaultValue: 'v1.3.0_daily_build', name: 'branchName',
-                type: 'PT_BRANCH_TAG', quickFilterEnabled: true, sortMode: 'DESCENDING_SMART', listSize: '5')*/
-        string defaultValue: 'v1.3.0_daily_build', description: '注意：选择应用发布分支', name: 'branchName'
+        // 插件BUG：defaultValue的值必须为存在的分支或标签，构建成功一次后，才可获取全部远程分支与标签！（优先取共享库分支列表，谨慎使用！）【Jenkins Master、Slave架构需在Master节点生成ssh key并配置至Git代码仓库中！】
+        gitParameter(branchFilter: 'origin/(.*)', tagFilter: "*", defaultValue: 'main', name: 'branchName',
+                type: 'PT_BRANCH_TAG', quickFilterEnabled: true, sortMode: 'DESCENDING_SMART', listSize: '5',
+                useRepository: "http://192.168.100.150/devops/devops-web-frontend.git")
+//        string defaultValue: 'v1.3.0_daily_build', description: '注意：选择应用发布分支', name: 'branchName'
         choice choices: ['dev01', 'dev02', 'test01', 'test02'], description: '环境列表', name: 'envList'
         choice choices: ['256Mi', '512Mi', '1024Mi', '2048Mi', '4096Mi'], description: '最大内存', name: 'memory'
+        choice choices: ['1', '2', '3', '4', '5'], description: '副本数', name: 'replicaCount'
         choice choices: ['trinity', 'zhenhai', 'tai2', 'basf', 'yc', 'yulin', 'spc'],
                 description: '租户列表（定制化登录页，参数即将弃用！）', name: 'tenantList'
         choice choices: ['devops.web.frontend'], description: '服务访问的域名（注意：域名末尾会追加环境选择：domainName.dev01）', name: 'domainName'
@@ -110,7 +112,7 @@ pipeline {
                     if ("${env.projectId}" == "null") {
                         env.projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${env.serviceName}")
                     }
-                    println("projectId：${env.projectId}")
+                    println("serviceName：${env.serviceName}，projectId：${env.projectId}")
 
                     // Git提交ID
                     env.commitId = gitlab.GetShortCommitIdByEightDigit()
@@ -285,7 +287,7 @@ pipeline {
                     // 项目定制参数
                     Map projectParamsMap = projectCustom.getProjectParamsMap("${params.envList}")
                     // Kubernetes发布模板文件内容替换
-                    kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.accessDomainName}", "${params.memory}", projectParamsMap)
+                    kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.accessDomainName}", "${params.memory}", "${params.replicaCount}", projectParamsMap)
                     println("projectParamsMap：${projectParamsMap}")
                 }
             }

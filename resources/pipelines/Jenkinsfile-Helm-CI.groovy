@@ -84,7 +84,7 @@ pipeline {
                     if ("${env.projectId}" == "null") {
                         env.projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${env.serviceName}")
                     }
-                    println("projectId：${env.projectId}")
+                    println("serviceName：${env.serviceName}，projectId：${env.projectId}")
 
                     // Git提交ID
                     env.commitId = gitlab.GetShortCommitIdByEightDigit()
