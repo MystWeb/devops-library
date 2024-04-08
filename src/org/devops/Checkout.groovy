@@ -16,12 +16,16 @@ def GetCode(srcUrl, branchName, credentialsId) {
                             $class: 'SubmoduleOption',
                             disableSubmodules: false,
                             parentCredentials: false,
-                            recursiveSubmodules: true, // 如果需要递归检出子模块的源码内容，请设置为 true
-                            reference: '', // 可选，可以使用的提交哈希或标签进行子模块检出
-                            trackingSubmodules: false // 如果需要跟踪子模块的提交，请设置为 true
-                    ]
+                            recursiveSubmodules: true, // 设置为true以递归检出子模块
+                            trackingSubmodules: false // 设置为true以跟踪子模块提交
+                    ],
+                    // 用于指定本地分支的名称
+                    [
+                            $class: 'LocalBranch',
+                            localBranch: branchName // 指定本地分支名称，与远程分支同名
+                    ],
             ],
-            submoduleCfg: [],
+//            submoduleCfg: [],
             userRemoteConfigs: [[credentialsId: credentialsId, url: srcUrl]]
     ])
 }
