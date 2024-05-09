@@ -18,6 +18,22 @@ def MavenBuildSkipTest() {
 }
 
 /**
+ * 自定义Maven版本构建（基于Linux宿主机环境变量）
+ */
+def MavenCustomVersionBuild(){
+    sh """
+       export JAVA_HOME=/opt/jdk1.8.0_391
+       mvn -v
+       mvn clean package --settings "${M2_HOME}"/conf/settings-jdk-1.8.xml -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true
+    
+       # export JAVA_HOME=/opt/jdk-17.0.9
+       # export MAVEN_OPTS="-Dmaven.compiler.source=17 -Dmaven.compiler.target=17"
+    
+       cp -ar /data/nfs/shared-tools/gams/ ./gams
+    """
+}
+
+/**
  * Gradle构建
  */
 def GradleBuild() {
@@ -61,7 +77,7 @@ def YarnBuild() {
  *  Global npm packages to install：npm install -g pnpm
  *  Global npm packages refresh hours：72
  */
-def CustomNodeJSVersionBuild(version) {
+def NodeJSCustomVersionBuild(version) {
     nodejs(version) {
         sh """
             node -v && npm -v
@@ -101,7 +117,7 @@ def CodeBuild(buildTool) {
             YarnBuild()
             break;
         case "nodejs-18":
-            CustomNodeJSVersionBuild("nodejs-18")
+            NodeJSCustomVersionBuild("nodejs-18")
             break;
         default:
             error "No such tools ... [maven/mavenSkip/gradle/ant/go/npm/yarn]"

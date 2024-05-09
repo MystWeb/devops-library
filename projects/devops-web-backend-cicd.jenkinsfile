@@ -143,6 +143,16 @@ pipeline {
             steps {
                 script {
                     println("Build")
+                    /*sh """
+                       export JAVA_HOME=/opt/jdk1.8.0_391
+                       mvn -v
+                       mvn clean package --settings "${M2_HOME}"/conf/settings-jdk-1.8.xml -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true
+
+                       export JAVA_HOME=/opt/jdk-17.0.9
+                       export MAVEN_OPTS="-Dmaven.compiler.source=17 -Dmaven.compiler.target=17"
+
+                       cp -ar /data/nfs/shared-tools/gams/ ./gams
+                    """*/
                     build.CodeBuild("${env.buildType}")
                 }
             }
