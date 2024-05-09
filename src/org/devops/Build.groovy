@@ -53,6 +53,27 @@ def YarnBuild() {
 }
 
 /**
+ * Jenkins 自定义NodeJS版本构建
+ * http://192.168.100.150:8080/manage/configureTools/
+ * NodeJS安装：
+ *  别名：nodejs-18
+ *  版本：NodeJS 18.19.0
+ *  Global npm packages to install：npm install -g pnpm
+ *  Global npm packages refresh hours：72
+ */
+def CustomNodeJSVersionBuild(version) {
+    nodejs(version) {
+        sh """
+            node -v && npm -v
+            npm cache clean --force
+            yarn -v
+            yarn config set registry https://registry.npmmirror.com
+            yarn && yarn run build
+        """
+    }
+}
+
+/**
  * Main-代码构建
  * @param buildTool 构建工具
  */
@@ -78,6 +99,9 @@ def CodeBuild(buildTool) {
             break;
         case "yarn":
             YarnBuild()
+            break;
+        case "nodejs-18":
+            CustomNodeJSVersionBuild("nodejs-18")
             break;
         default:
             error "No such tools ... [maven/mavenSkip/gradle/ant/go/npm/yarn]"
