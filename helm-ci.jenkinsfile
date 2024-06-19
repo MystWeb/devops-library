@@ -58,8 +58,6 @@ pipeline {
         gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
         // 注意：Helm Chart分支名称
         helmBranchName = "main"
-        // junit报告存放位置（多模块使用 "**" ，单模块去掉 "**/" 即可）
-        junitReportsPath = '**/target/surefire-reports/*.xml'
     }
 
     stages {
@@ -261,8 +259,9 @@ pipeline {
             // cleanWs()
 
             // 无论构建结果如何，保存测试报告
-            archiveArtifacts artifacts: "${env.junitReportsPath}", allowEmptyArchive: true
-            junit "${env.junitReportsPath}"
+            archiveArtifacts artifacts: '**/target/surefire-reports/*.xml', allowEmptyArchive: true
+            // junit报告存放位置（多模块使用 "**" ，单模块去掉 "**/" 即可）
+            junit '**/target/surefire-reports/*.xml', allowEmptyResults: true
         }
     }
 

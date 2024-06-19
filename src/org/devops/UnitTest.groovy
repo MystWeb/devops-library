@@ -2,7 +2,7 @@ package org.devops
 
 // Maven测试
 def MavenTest() {
-    sh "mvn test"
+    sh "mvn clean install -DskipTests && mvn test"
     junit 'target/surefire-reports/*.xml'
 }
 
