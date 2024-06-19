@@ -42,7 +42,9 @@ def CodeTest(buildTool) {
             MavenTest()
             break;
         case "mavenSkip":
-            println("maven Skip the unit tests")
+            MavenTest()
+            // MavenSkip函数的Test阶段交给父级Jenkinsfile参数控制
+//            println("maven Skip the unit tests")
             break;
         case "gradle":
             GradleTest()

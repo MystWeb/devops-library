@@ -10,11 +10,12 @@
 # HttpRequest：https://plugins.jenkins.io/http_request
 # 钉钉通知：https://plugins.jenkins.io/dingding-notifications/
 # 资源锁定（关键阶段并发问题处理）：https://plugins.jenkins.io/lockable-resources，配置：Dashboard|lockable-resources
+# JUnit单元测试（含报告展示）：https://plugins.jenkins.io/junit
 
 # Pull image
 resource "docker_image" "jenkins" {
   # (String) The name of the Docker image, including any tags or SHA256 repo digests.
-  name         = "jenkins/jenkins:2.426.1-lts-jdk17"
+  name         = "jenkins/jenkins:2.426.3-lts-jdk17"
   # (Boolean) If true, then the Docker image won't be deleted on destroy operation.
   # If this is false, it will delete the image from the docker local storage on destroy operation.
   keep_locally = true

@@ -58,6 +58,8 @@ pipeline {
         gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
         // 注意：Helm Chart分支名称
         helmBranchName = "main"
+        // junit报告存放位置（多模块使用 "**" ，单模块去掉 "**/" 即可）
+        junitReportsPath = '**/target/surefire-reports/*.xml'
     }
 
     stages {
@@ -132,7 +134,15 @@ pipeline {
                         println("构建类型为：custom，跳过UnitTest阶段，如需单元测试请使用符号：&& 拼接命令")
                     } else {
                         println("UnitTest")
-                        unitTest.CodeTest("${env.buildType}")
+                        // 防止JUnit阶段失败导致流水线无法继续执行
+                        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                            // maven 多模块项目指定 entrypoint 启动类主模块的 junit 运行命令
+                            if ("${env.buildType}" == "maven" || "${env.buildType}" == "mavenSkip") {
+                                sh "mvn -pl projectName-entrypoint test"
+                            } else {
+                                unitTest.CodeTest("${env.buildType}")
+                            }
+                        }
                     }
                 }
             }
@@ -234,10 +244,6 @@ pipeline {
     }
 
     post {
-        /*always {
-            // clean workspace build
-            cleanWs()
-        }*/
         success {
             script {
 //                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
@@ -249,6 +255,14 @@ pipeline {
 //                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
                 notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
             }
+        }
+        always {
+            // clean workspace build
+            // cleanWs()
+
+            // 无论构建结果如何，保存测试报告
+            archiveArtifacts artifacts: "${env.junitReportsPath}", allowEmptyArchive: true
+            junit "${env.junitReportsPath}"
         }
     }
 

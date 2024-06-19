@@ -7,14 +7,14 @@ def MavenBuild() {
     // 使用绝对路径的执行命令
 //    sh "/usr/local/apache-maven/bin/mvn clean package"
     // 配置环境变量的执行命令
-    sh "mvn -v && mvn clean package"
+    sh "mvn -v && mvn clean install -DskipTests && mvn clean package -DskipTests"
 }
 
 /**
- * Maven构建：跳过PMD、CheckStyle、Test检查
+ * Maven构建：跳过PMD、CheckStyle、Test、jaxb2检查
  */
 def MavenBuildSkipTest() {
-    sh "mvn -v && mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true"
+    sh "mvn -v && mvn clean install -DskipTests && mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true"
 }
 
 /**
