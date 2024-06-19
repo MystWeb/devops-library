@@ -56,6 +56,8 @@ pipeline {
         gitlabKeysCredentialsId = "7f714471-562a-4ddd-884b-186f90556a9a"
         // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_Edition_URL，users：devops）
         gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
+        // 测试报告路径（多模块使用 "**/" ，单模块去掉 "**/"）
+        reportsPath = '**/target/surefire-reports/*.xml'
         // 注意：Helm Chart分支名称
         helmBranchName = "main"
     }
@@ -143,6 +145,10 @@ pipeline {
                         }
                     }
                 }
+                // 保存测试报告（无论是否有报告都允许为空归档）
+                archiveArtifacts artifacts: "${env.reportsPath}", allowEmptyArchive: true
+                // 分析并发布JUnit测试报告（多模块项目使用 "**/" ，单模块去掉 "**/"）
+                junit "${env.reportsPath}"
             }
         }
 
@@ -250,19 +256,18 @@ pipeline {
         }
         failure {
             script {
-//                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
                 notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
             }
         }
-        always {
-            // clean workspace build
-            // cleanWs()
-
-            // 无论构建结果如何，保存测试报告
-            archiveArtifacts artifacts: '**/target/surefire-reports/*.xml', allowEmptyArchive: true
-            // junit报告存放位置（多模块使用 "**" ，单模块去掉 "**/" 即可）
-            junit '**/target/surefire-reports/*.xml', allowEmptyResults: true
+        unstable {
+            script {
+                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
+            }
         }
+        /*always {
+            // clean workspace build
+            cleanWs()
+        }*/
     }
 
 }
