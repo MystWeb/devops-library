@@ -58,6 +58,9 @@ pipeline {
         gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
         // 测试报告路径（多模块使用 "**/" ，单模块去掉 "**/"）
         reportsPath = '**/target/surefire-reports/*.xml'
+        // Allure报告路径
+        allureResultsPath = '**/target/allure-results'
+
         // 注意：Helm Chart分支名称
         helmBranchName = "main"
     }
@@ -138,7 +141,7 @@ pipeline {
                         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                             // maven 多模块项目指定 entrypoint 启动类主模块的 junit 运行命令
                             if ("${env.buildType}" == "maven" || "${env.buildType}" == "mavenSkip") {
-                                sh "mvn -pl projectName-entrypoint test"
+                                sh "mvn clean install -DskipTests && mvn -pl projectName-entrypoint test && mkdir -p ${env.allureResultsPath}"
                             } else {
                                 unitTest.CodeTest("${env.buildType}")
                             }
@@ -149,6 +152,9 @@ pipeline {
                 archiveArtifacts artifacts: "${env.reportsPath}", allowEmptyArchive: true
                 // 分析并发布JUnit测试报告（多模块项目使用 "**/" ，单模块去掉 "**/"）
                 junit "${env.reportsPath}"
+                // Allure分析报告
+                println("AllureReport")
+                allure includeProperties: false, jdk: '', results: [[path: "${env.allureResultsPath}"]]
             }
         }
 

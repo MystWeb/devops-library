@@ -11,6 +11,7 @@
 # 钉钉通知：https://plugins.jenkins.io/dingding-notifications/
 # 资源锁定（关键阶段并发问题处理）：https://plugins.jenkins.io/lockable-resources，配置：Dashboard|lockable-resources
 # JUnit单元测试（含报告展示）：https://plugins.jenkins.io/junit
+# Allure报告分析（含报告展示）：https://plugins.jenkins.io/allure-jenkins-plugin/
 
 # Pull image
 resource "docker_image" "jenkins" {
