@@ -75,7 +75,7 @@ def dingTalkNotice(dingTalkTokenCredentialsId) {
 def dingTalkPluginNotice(dingTalkRobotId) {
     // Jenkins DingTalk插件的钉钉通知代码
     withCredentials([string(credentialsId: "${dingTalkRobotId}", variable: 'DINGTALK_ROBOT_ID')]) {
-        def color = "${currentBuild.currentResult}" == 'SUCCESS' ? 'green' : "${currentBuild.currentResult}" == 'FAILURE' ? 'red' : 'yellow'
+        def color = "${currentBuild.currentResult}" == 'SUCCESS' ? 'green' : "${currentBuild.currentResult}" == 'FAILURE' ? 'red' : 'orange'
         def newDescription = "${currentBuild.description}".replaceAll("\n", " \n &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")
         println("description：${currentBuild.description} \n newDescription：${newDescription}")
         dingtalk robot: "${DINGTALK_ROBOT_ID}",
