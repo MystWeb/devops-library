@@ -1,0 +1,103 @@
+// 加载共享库
+@Library("mylib@main") _
+
+// 导入库
+
+import org.devops.Checkout
+import org.devops.CodeScan
+import org.devops.GitLab
+import org.devops.Notice
+
+// New实例化
+def checkout = new Checkout()
+def codeScan = new CodeScan()
+def gitlab = new GitLab()
+def notice = new Notice()
+
+// 流水线
+pipeline {
+    agent { label "build" }
+
+    options {
+        skipDefaultCheckout true
+        buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '90')
+    }
+
+    triggers {
+        // 工作日早八点半定时自动执行代码质量检查与通知
+        cron('H 0 * * 1-5')
+    }
+
+    environment {
+        // GitLab用户密钥访问凭据Id：id_ed25519 (GitLab-Enterprise-私钥文件（192.168.100.102:/root/.ssh/id_ed25519）)
+        gitlabKeysCredentialsId = "a7d76450-d876-44a8-8d96-92f11cd013b0"
+        // SonarQube访问凭据Id：SonarQube-admin-token（192.168.100.150:9000）
+        sonarqubeUserTokenCredentialsId = "c23d40dd-a6c8-4a17-a0d1-23dd795fe773"
+        // SonarQube访问地址
+        sonarqubeHostUrl = "http://192.168.100.150:9000/sonarqube"
+        // DingTalk-robot-token（Jenkins钉钉群聊）
+        dingTalkTokenCredentialsId = "8c6083c7-e1c2-47c0-9367-b67a9469bcd5"
+        // DingTalk-robot-id（SonarQube钉钉群聊）
+        dingTalkRebotIdCredentialsId = "7a711aa6-04b5-4a6d-9907-c0f6b90f6acc"
+        // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_Edition_URL，users：devops）
+        gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
+    }
+
+    stages {
+
+        stage("Global") {
+            steps {
+                script {
+                    // 修改Jenkins构建描述
+                    currentBuild.description = """ Timing Code Scan Projects \n [SonarQube：${env.sonarqubeHostUrl}](${env.sonarqubeHostUrl}) """
+                }
+            }
+        }
+
+        stage("CodeScan-devops-web-backend") {
+            steps {
+                script {
+                    println("CodeScan：devops-web-backend")
+                    // 分支名称
+                    env.branchName = "main"
+                    // 代码扫描 commit-status
+                    env.projectId = "111" // devops-web-backend
+                    env.projectKey = "devops-web-backend" // SonarQubeProjectKey
+                    env.commitId = gitlab.GetCommitIdByApi("${env.gitlabUserTokenCredentialsId}", "${projectId}", "${env.branchName}")
+
+                    sh "[ -d ${env.projectId} ] || mkdir ${env.projectId}"
+                    ws("${WORKSPACE}/${env.projectId}") {
+                        env.srcUrl = "http://192.168.100.150/devops/devops-web-backend.git"
+                        println("Checkout")
+                        checkout.GetCode("${env.srcUrl}", "${env.branchName}", "${env.gitlabKeysCredentialsId}")
+                        codeScan.CodeScan_Sonar("${env.sonarqubeUserTokenCredentialsId}", "${env.gitlabUserTokenCredentialsId}",
+                                "${env.branchName}", "${env.commitId}", "${env.projectId}")
+                        codeScan.SonarQubeMetricsAndNotify("${env.sonarqubeHostUrl}","${env.projectKey}",
+                                "${env.sonarqubeUserTokenCredentialsId}","${env.dingTalkRebotIdCredentialsId}")
+                    }
+                }
+            }
+        }
+
+    }
+
+    post {
+        always {
+            // clean workspace build
+            cleanWs()
+        }
+        success {
+            script {
+//                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
+            }
+        }
+        failure {
+            script {
+//                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
+            }
+        }
+    }
+
+}

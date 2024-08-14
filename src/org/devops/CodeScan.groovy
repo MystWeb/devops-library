@@ -1,6 +1,56 @@
 package org.devops
 
 /**
+ * SonarQube指标&通知
+ * @param sonarHostUrl SonarQube访问地址
+ * @param projectKey SonarQube项目key
+ * @param sonarqubeUserTokenCredentialsId SonarQube用户Token凭据ID
+ * @param dingTalkRobotIdCredentialsId 钉钉机器人Token凭据ID
+ */
+def SonarQubeMetricsAndNotify(sonarHostUrl, projectKey, sonarqubeUserTokenCredentialsId, dingTalkRobotIdCredentialsId) {
+    withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
+                     string(credentialsId: "${dingTalkRobotIdCredentialsId}", variable: 'DINGTALK_ROBOT_ID')]) {
+
+        // 获取 SonarQube 扫描结果
+        def json = sh(script: """
+            curl -u ${SONARQUBE_USER_TOKEN}: "${sonarHostUrl}/api/measures/component?component=${projectKey}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density"
+        """, returnStdout: true).trim()
+
+        // 解析 JSON 数据
+        def jsonObject = readJSON(text: json)
+        def metrics = ['bugs', 'vulnerabilities', 'code_smells', 'coverage', 'duplicated_lines_density'].collectEntries {
+            [(it): jsonObject.component.measures.find { measure -> measure.metric == it }?.value ?: 'N/A']
+        }
+
+        // 颜色逻辑：如果关键字段为 0，显示绿色；如果大于 0，显示红色
+        def bugColor = "${metrics.bugs}".toInteger() > 0 ? 'red' : 'green'
+        def vulnerabilityColor = "${metrics.vulnerabilities}".toInteger() > 0 ? 'red' : 'green'
+        def codeSmellColor = "${metrics.code_smells}".toInteger() > 0 ? 'orange' : 'green'
+        // 假设 80% 覆盖率为合格标准
+        def coverageColor = "${metrics.coverage}".toDouble() < 80.0 ? 'orange' : 'green'
+        // 假设 10% 重复率为警戒线
+        def duplicatedLinesColor = "${metrics.duplicated_lines_density}".toDouble() > 10.0 ? 'red' : 'green'
+
+        // 构建通知消息
+        def message = [
+                "### SonarQube 扫描结果 - 项目：${projectKey}",
+                "- **Bugs**: <font color=${bugColor}>${metrics.bugs}</font>",
+                "- **Vulnerabilities**: <font color=${vulnerabilityColor}>${metrics.vulnerabilities}</font>",
+                "- **Code Smells**: <font color=${codeSmellColor}>${metrics.code_smells}</font>",
+                "- **Coverage**: <font color=${coverageColor}>${metrics.coverage}%</font>",
+                "- **Duplicated Lines Density**: <font color=${duplicatedLinesColor}>${metrics.duplicated_lines_density}%</font>"
+        ]
+
+        // 发送钉钉通知
+        dingtalk robot: "${DINGTALK_ROBOT_ID}",
+                type: "MARKDOWN",
+                title: "SonarQube 扫描通知 - ${projectKey}",
+                text: message,
+                atAll: false
+    }
+}
+
+/**
  * 代码扫描-Sonar
  * @param sonarqubeUserTokenCredentialsId SonarQube访问凭据Id
  * @param gitlabUserTokenCredentialsId GitLab用户Token访问凭据Id
