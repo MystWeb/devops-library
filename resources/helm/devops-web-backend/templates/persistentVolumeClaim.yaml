@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Release.Namespace }}-{{ .Chart.Name }}-volume
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany # 这种存储可以以读写的方式被多个节点共享。
+  persistentVolumeReclaimPolicy: Retain # 当 PersistentVolume 释放后，保留该卷，不会自动删除。
+  # 阿里云 OSS 存储配置信息：https://help.aliyun.com/zh/ack/ack-managed-and-ack-dedicated/user-guide/mount-statically-provisioned-oss-volumes#115f3ba046alq
+{{/*  csi:*/}}
+{{/*    driver: "ossplugin.csi.alibabacloud.com"*/}}
+{{/*    volumeHandle: {{ .Release.Namespace }}-{{ .Chart.Name }}-volume*/}}
+{{/*    volumeAttributes:*/}}
+{{/*      bucket: "big-web-platform"*/}}
+{{/*      url: "https://oss-cn-shanghai-internal.aliyuncs.com"*/}}
+{{/*      akId: "LTAI5tHtWXzgg********"*/}}
+{{/*      akSecret: "XYFvFp7OE**************"*/}}
+{{/*      otherOpts: "-o max_stat_cache_size=0 -o allow_other"*/}}
+{{/*      path: "/ack-data/{{ .Chart.Name }}-volume"*/}}
+  nfs: # NFS搭建教程：https://cloud.tencent.com/developer/article/1721166
+    server: 192.168.100.102
+    path: /data/nfs/{{ .Release.Namespace }}/{{ .Chart.Name }}-volume # 需首先创建目录
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Chart.Name }}-pvc
+spec:
+  accessModes:
+    - ReadWriteMany # 这种存储可以以读写的方式被多个节点共享。
+  resources:
+    requests:
+      storage: 5Gi
+  volumeName: {{ .Release.Namespace }}-{{ .Chart.Name }}-volume
+  volumeMode: Filesystem

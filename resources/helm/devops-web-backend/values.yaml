@@ -114,3 +114,8 @@ affinity: {}
 # ProjectCustom：项目后端Java启动参数
 PARAMS: "--spring.config.additional-location=classpath:/config/devops/ \
 --spring.profiles.active=test1"
+# 模板与索引管理策略创建所需连接信息
+es:
+  hostname: elasticsearch-master.logging.svc.cluster.local
+  username: elastic
+  password: proaim@2013

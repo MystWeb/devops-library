@@ -1,0 +1,153 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluent-bit-{{ include "devops-web-backend.fullname" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: fluent-bit-{{ include "devops-web-backend.fullname" . }}
+  template:
+    metadata:
+      labels:
+        service: fluent-bit-{{ include "devops-web-backend.fullname" . }}
+    spec:
+      containers:
+        - name: fluent-bit-{{ .Chart.Name }}
+          image: "docker.io/fluent/fluent-bit:3.1-debug"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /fluent-bit/bin/fluent-bit
+          args:
+            - --workdir=/fluent-bit/etc
+            - --config=/fluent-bit/etc/conf/fluent-bit.conf
+          ports:
+            - name: http
+              containerPort: 2020
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+          volumeMounts:
+            - name: config
+              mountPath: /fluent-bit/etc/conf
+            - name: fluent-bit-{{ .Chart.Name }}-volume
+              mountPath: /data/nfs/{{ .Release.Namespace }}/{{ .Chart.Name }}-volume # 使用命名空间动态路径并确保这里与应用日志位置一致
+      initContainers:
+        - name: init-create-index-template
+          image: docker.io/fluent/fluent-bit:3.1-debug
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              ping -c 4 {{ .Values.es.hostname }}
+              curl -k -X PUT "https://{{ .Values.es.hostname }}:9200/_ilm/policy/fluent-bit-ilm-policy" \
+              -H 'Content-Type: application/json' \
+                -u {{ .Values.es.username }}:{{ .Values.es.password }} \
+                -d '
+                {
+                  "policy": {
+                    "phases": {
+                      "hot": {
+                        "actions": {
+                          "rollover": {
+                            "max_size": "10gb",
+                            "max_age": "7d"
+                          }
+                        }
+                      },
+                      "delete": {
+                        "min_age": "15d",
+                        "actions": {
+                          "delete": {}
+                        }
+                      }
+                    }
+                  }
+                }'
+              curl -k -X PUT "https://{{ .Values.es.hostname }}:9200/_index_template/fluent-bit-template" \
+              -H 'Content-Type: application/json' \
+                -u {{ .Values.es.username }}:{{ .Values.es.password }} \
+                -d '
+                {
+                  "index_patterns": ["fluent-bit-*"],
+                  "template": {
+                    "settings": {
+                      "index.lifecycle.name": "fluent-bit-ilm-policy",
+                      "index.lifecycle.rollover_alias": "fluent-bit-template"
+                    },
+                    "mappings": {
+                      "properties": {
+                        "@timestamp": { "type": "date" }
+                      }
+                    }
+                  },
+                  "priority": 500,
+                  "composed_of": [],
+                  "version": 1
+                }'
+          volumeMounts:
+            - name: config
+              mountPath: /fluent-bit/etc/conf
+      volumes:
+        - name: config
+          configMap:
+            name: fluent-bit-{{ .Chart.Name }}-configmap
+        - name: fluent-bit-{{ .Chart.Name }}-volume
+          persistentVolumeClaim:
+            claimName: {{ .Chart.Name }}-pvc
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-{{ .Chart.Name }}-configmap
+  labels:
+    service: fluent-bit-{{ .Chart.Name }}-configmap
+data:
+  custom_parsers.conf: |
+    [PARSER]
+        Name docker_no_time
+        Format json
+        Time_Keep Off
+        Time_Key time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+  fluent-bit.conf: |
+    [SERVICE]
+        Daemon Off
+        Flush 1
+        Log_Level info
+        Parsers_File /fluent-bit/etc/parsers.conf
+        Parsers_File /fluent-bit/etc/conf/custom_parsers.conf
+        HTTP_Server On
+        HTTP_Listen 0.0.0.0
+        HTTP_Port 2020
+        Health_Check On
+
+    [INPUT]
+        Name tail
+        Path /data/nfs/{{ .Release.Namespace }}/{{ .Chart.Name }}-volume/*.log
+        Path_Key filename
+        Tag {{ .Release.Namespace }}
+        Mem_Buf_Limit 5MB
+        Skip_Long_Lines On
+        Parser json
+
+    [OUTPUT]
+        Name es
+        Match {{ .Release.Namespace }}
+        Index fluent-bit-{{ .Release.Namespace }}-%Y.%m.%d
+        Type  _doc
+        Host {{ .Values.es.hostname }}
+        Port 9200
+        HTTP_User {{ .Values.es.username }}
+        HTTP_Passwd {{ .Values.es.password }}
+        tls On
+        tls.verify Off
+        Retry_Limit False
+        Suppress_Type_Name On
+        Replace_Dots On
