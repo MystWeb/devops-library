@@ -163,13 +163,17 @@ npm install -g yarn
 npm config set -g registry https://registry.npmmirror.com/
 ```
 
+https://docs.sonarsource.com/sonarqube/9.9/analyzing-source-code/scanners/sonarscanner/
+
+> 如果您运行的是 SonarQube 9.9 并以 Java 11 作为扫描仪运行时环境，则最新兼容的 SonarScanner 版本为 4.8.x。更高版本的 SonarScanner 需要 Java 17 作为运行时环境。
+
 ```bash
 [root@localhost ~]# sonar-scanner -v
-INFO: Scanner configuration file: /opt/sonar-scanner-5.0.1.3006-linux/conf/sonar-scanner.properties
+INFO: Scanner configuration file: /opt/sonar-scanner/conf/sonar-scanner.properties
 INFO: Project root configuration file: NONE
-INFO: SonarScanner 5.0.1.3006
-INFO: Java 17.0.7 Eclipse Adoptium (64-bit)
-INFO: Linux 3.10.0-1160.92.1.el7.x86_64 amd64
+INFO: SonarScanner 4.8.1.3023
+INFO: Java 11.0.17 Eclipse Adoptium (64-bit)
+INFO: Linux 3.10.0-1160.118.1.el7.x86_64 amd64
 ```
 
 ## 四、Jenkins Agent安装与配置
@@ -216,19 +220,37 @@ vim /data/jenkins_agent/jenkins-agent-deploy.sh
 
 ```shell
 #!/bin/bash
+# 日志文件路径
+LOG_FILE="/data/jenkins_agent/agent.log"
+
+# Source environment variables
+source /etc/profile
+echo "PATH: $PATH" > $LOG_FILE
 
 # 生成 secret-file 文件
+echo "Creating secret-file" >> $LOG_FILE
 echo "9fe0cce6b7a3114c49246557f4326de02afdedc7af23776c4c2a8f9c357a9128" > /data/jenkins_agent/secret-file
 
-# 延迟启动jenkins agent，预防系统未初始化完毕，环境变量不生效
-sleep 10
+# 检查是否有 Jenkins agent 在运行，如果有则停止
+if pgrep -f "agent.jar" > /dev/null; then
+    echo "Stopping existing Jenkins agent" >> $LOG_FILE
+    pkill -f "agent.jar"
+fi
 
 # 启动 Jenkins agent
+echo "Starting Jenkins agent" >> $LOG_FILE
 nohup java -jar /data/jenkins_agent/agent.jar \
-    -jnlpUrl http://192.168.100.150:8080/computer/build02/jenkins-agent.jnlp \
+    -url http://192.168.100.150:8080/ \
     -secret @/data/jenkins_agent/secret-file \
+    -name build02 \
     -workDir "/data/jenkins_agent" \
-    > /dev/null 2>&1 &
+    >> /dev/null 2>&1 &
+
+if [ $? -eq 0 ]; then
+    echo "Jenkins agent started successfully" >> $LOG_FILE
+else
+    echo "Failed to start Jenkins agent" >> $LOG_FILE
+fi
 ```
 
 ```bash
@@ -263,11 +285,11 @@ Description=Jenkins Agent Service
 After=network.target
 
 [Service]
-Type=simple
-User=root
-WorkingDirectory=/data/jenkins_agent
-ExecStart=/bin/bash -c "sleep 10 && /opt/jdk-11.0.19/bin/java -jar /data/jenkins_agent/agent.jar -jnlpUrl http://192.168.100.150:8080/computer/build01/jenkins-agent.jnlp -secret @/data/jenkins_agent/secret-file -workDir '/data/jenkins_agent'"
+Type=forking
+ExecStart=/bin/bash /data/jenkins_agent/jenkins-agent-deploy.sh
 Restart=on-failure
+RestartSec=5s
+StartLimitInterval=0
 
 [Install]
 WantedBy=multi-user.target

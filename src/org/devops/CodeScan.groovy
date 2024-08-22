@@ -51,6 +51,38 @@ def SonarQubeMetricsAndNotify(sonarHostUrl, projectKey, sonarqubeUserTokenCreden
 }
 
 /**
+ * 代码扫描-Sonar（使用 Maven）
+ * @param sonarqubeUserTokenCredentialsId SonarQube访问凭据Id
+ * @param gitlabUserTokenCredentialsId GitLab用户Token访问凭据Id
+ * @param projectVersion 代码扫描-Sonar-项目版本（推荐使用分支名称）
+ * @param commitId 提交Id
+ * @param projectId 项目Id
+ * @param mavenPath Maven路径（可选，默认为"/opt/apache-maven-3.8.8/bin/mvn"）
+ * @param jdkHome JDK路径（可选，默认为"/opt/jdk-11.0.19"）
+ * 插件链接：https://github.com/mc1arke/sonarqube-community-branch-plugin、
+ * https://github.com/xuhuisheng/sonar-l10n-zh、
+ * https://github.com/gabrie-allaigre/sonar-gitlab-plugin
+ */
+def CodeScan_Sonar_Maven(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId, projectVersion, commitId, projectId, mavenPath = "/opt/apache-maven-3.8.8/bin/mvn", jdkHome = "/opt/jdk-11.0.19") {
+    withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
+                     string(credentialsId: "${gitlabUserTokenCredentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
+        // 使用 Maven 执行 SonarQube 扫描
+        sh """
+            ${mavenPath} clean -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true \
+            verify sonar:sonar \
+            -Dsonar.login=${SONARQUBE_USER_TOKEN} \
+            -Dsonar.projectVersion=${projectVersion} \
+            -Dsonar.branch.name=${projectVersion} \
+            -Dsonar.gitlab.commit_sha=${commitId} \
+            -Dsonar.gitlab.ref_name=${projectVersion} \
+            -Dsonar.gitlab.project_id=${projectId} \
+            -Dsonar.gitlab.user_token=${GITLAB_USER_TOKEN} \
+            -Dsonar.java.jdkHome=${jdkHome}
+        """
+    }
+}
+
+/**
  * 代码扫描-Sonar
  * @param sonarqubeUserTokenCredentialsId SonarQube访问凭据Id
  * @param gitlabUserTokenCredentialsId GitLab用户Token访问凭据Id

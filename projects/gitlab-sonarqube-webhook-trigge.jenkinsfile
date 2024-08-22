@@ -1,0 +1,100 @@
+// 加载共享库
+@Library("mylib@main") _
+
+// 导入库
+import org.devops.Checkout
+import org.devops.CodeScan
+import org.devops.GitLab
+import org.devops.Notice
+
+// New实例化
+def checkout = new Checkout()
+def codeScan = new CodeScan()
+def gitlab = new GitLab()
+def notice = new Notice()
+
+pipeline {
+    agent { label "build" }
+
+    options {
+        skipDefaultCheckout true
+        buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '90')
+    }
+
+    environment {
+        gitlabKeysCredentialsId = "a7d76450-d876-44a8-8d96-92f11cd013b0"
+        sonarqubeUserTokenCredentialsId = "c23d40dd-a6c8-4a17-a0d1-23dd795fe773"
+        sonarqubeHostUrl = "http://192.168.100.150:9000/sonarqube"
+        dingTalkTokenCredentialsId = "8c6083c7-e1c2-47c0-9367-b67a9469bcd5"
+        dingTalkRebotIdCredentialsId = "7a711aa6-04b5-4a6d-9907-c0f6b90f6acc"
+        gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
+        buName = "devops"
+    }
+
+    parameters {
+        string(name: 'gitlabSourceBranch', defaultValue: '', description: 'GitLab Source Branch')
+        string(name: 'gitlabSourceRepoName', defaultValue: '', description: 'GitLab Source Repo Name')
+    }
+
+    stages {
+        stage("Global") {
+            steps {
+                script {
+                    currentBuild.description = """ gitlab-webhook-trigger Code Scan Projects \n [SonarQube：${env.sonarqubeHostUrl}](${env.sonarqubeHostUrl}) """
+                }
+            }
+        }
+
+        stage("CodeScan") {
+            steps {
+                script {
+                    def branchName = params.gitlabSourceBranch ?: env.gitlabSourceBranch
+                    def repoName = params.gitlabSourceRepoName ?: env.gitlabSourceRepoName
+                    def projectKey = "${env.buName}-${repoName}"
+
+                    // 获取项目ID和Commit ID
+                    def projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${repoName}")
+                    def commitId = gitlab.GetCommitIdByApi("${env.gitlabUserTokenCredentialsId}", "${projectId}", "${branchName}")
+
+                    // 创建工作目录并执行代码扫描
+                    sh "[ -d ${projectId} ] || mkdir ${projectId}"
+                    ws("${WORKSPACE}/${projectId}") {
+                        def srcUrl = "192.168.100.150:${env.buName}/${repoName}.git"
+                        checkout.GetCode(srcUrl, branchName, "${env.gitlabKeysCredentialsId}")
+                        codeScan.CodeScan_Sonar("${env.sonarqubeUserTokenCredentialsId}", "${env.gitlabUserTokenCredentialsId}", branchName, commitId, projectId)
+                        codeScan.SonarQubeMetricsAndNotify("${env.sonarqubeHostUrl}", projectKey, "${env.sonarqubeUserTokenCredentialsId}", "${env.dingTalkRebotIdCredentialsId}")
+                    }
+                }
+            }
+        }
+
+        stage('Check Quality Gate') {
+            steps {
+                script {
+                    def qualityGate = waitForQualityGate()
+                    if (qualityGate.status != 'OK') {
+                        error "Pipeline failed due to quality gate failure: ${qualityGate.status}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            script {
+                updateGitlabCommitStatus name: 'sonarqube', state: 'success', description: 'SonarQube Quality Gate passed'
+                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
+            }
+        }
+        failure {
+            script {
+                updateGitlabCommitStatus name: 'sonarqube', state: 'failed', description: 'SonarQube Quality Gate failed'
+                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
+            }
+        }
+    }
+}
