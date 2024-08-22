@@ -318,8 +318,6 @@ def SonarQubeMetricsAndNotify(sonarHostUrl, projectKey, sonarqubeUserTokenCreden
 }
 ```
 
-![image-20240822165845524](Jenkins集成GitLab、SonarQube通过Pipeline实现代码提交、请求合并触发CICD.assets/image-20240822165845524.png)
-
 ## 钉钉
 
 ### 钉钉群聊添加自定义机器人-webhook
