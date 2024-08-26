@@ -4,16 +4,20 @@ package org.devops
  * SonarQube指标&通知
  * @param sonarHostUrl SonarQube访问地址
  * @param projectKey SonarQube项目key
+ * @param branchName SonarQube项目分支
  * @param sonarqubeUserTokenCredentialsId SonarQube用户Token凭据ID
  * @param dingTalkRobotIdCredentialsId 钉钉机器人Token凭据ID
  */
-def SonarQubeMetricsAndNotify(sonarHostUrl, projectKey, sonarqubeUserTokenCredentialsId, dingTalkRobotIdCredentialsId) {
+def SonarQubeMetricsAndNotify(sonarHostUrl, projectKey, branchName, sonarqubeUserTokenCredentialsId, dingTalkRobotIdCredentialsId) {
     withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
                      string(credentialsId: "${dingTalkRobotIdCredentialsId}", variable: 'DINGTALK_ROBOT_ID')]) {
 
+        // 等待2分钟以确保SonarQube任务完成
+        sleep(120)
+
         // 获取 SonarQube 扫描结果
         def json = sh(script: """
-            curl -u ${SONARQUBE_USER_TOKEN}: "${sonarHostUrl}/api/measures/component?component=${projectKey}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density"
+            curl -s -u ${SONARQUBE_USER_TOKEN}: "${sonarHostUrl}/api/measures/component?component=${projectKey}&branch=${branchName}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density"
         """, returnStdout: true).trim()
 
         // 解析 JSON 数据

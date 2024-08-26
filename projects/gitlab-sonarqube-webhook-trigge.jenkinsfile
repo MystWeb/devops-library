@@ -62,7 +62,8 @@ pipeline {
                         def srcUrl = "192.168.100.150:${env.buName}/${repoName}.git"
                         checkout.GetCode(srcUrl, branchName, "${env.gitlabKeysCredentialsId}")
                         codeScan.CodeScan_Sonar("${env.sonarqubeUserTokenCredentialsId}", "${env.gitlabUserTokenCredentialsId}", branchName, commitId, projectId)
-                        codeScan.SonarQubeMetricsAndNotify("${env.sonarqubeHostUrl}", projectKey, "${env.sonarqubeUserTokenCredentialsId}", "${env.dingTalkRebotIdCredentialsId}")
+                        codeScan.SonarQubeMetricsAndNotify("${env.sonarqubeHostUrl}","${env.projectKey}","${env.branchName}",
+                                "${env.sonarqubeUserTokenCredentialsId}","${env.dingTalkRebotIdCredentialsId}")
                     }
                 }
             }

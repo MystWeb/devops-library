@@ -72,7 +72,9 @@ pipeline {
                         checkout.GetCode("${env.srcUrl}", "${env.branchName}", "${env.gitlabKeysCredentialsId}")
                         codeScan.CodeScan_Sonar("${env.sonarqubeUserTokenCredentialsId}", "${env.gitlabUserTokenCredentialsId}",
                                 "${env.branchName}", "${env.commitId}", "${env.projectId}")
-                        codeScan.SonarQubeMetricsAndNotify("${env.sonarqubeHostUrl}","${env.projectKey}",
+                        /*codeScan.CodeScan_Sonar_Maven("${env.sonarqubeUserTokenCredentialsId}", "${env.gitlabUserTokenCredentialsId}",
+                                "${env.branchName}", "${env.commitId}", "${env.projectId}")*/
+                        codeScan.SonarQubeMetricsAndNotify("${env.sonarqubeHostUrl}","${env.projectKey}","${env.branchName}",
                                 "${env.sonarqubeUserTokenCredentialsId}","${env.dingTalkRebotIdCredentialsId}")
                     }
                 }
