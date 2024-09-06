@@ -26,6 +26,11 @@ locals {
   # stop_timeout (Number) Timeout (in seconds) to stop a container.
   container_stop_timeout = 3600
   container_env          = [
+    "TZ=Asia/Shanghai",
+    "NO_PROXY=localhost,127.0.0.1,127.0.0.0/8,10.0.0.0/8,172.0.0.0/8,192.168.0.0/16",
+    "HTTP_PROXY=http://192.168.50.126:7890",
+    "HTTPS_PROXY=http://192.168.50.126:7890",
+    "ALL_PROXY=socks://192.168.50.126:7890",
     "SONAR_WEB_CONTEXT=/sonarqube",
     # 注意：同步postgresql容器IP：172.18.0.5
     "SONAR_JDBC_URL=jdbc:postgresql://172.18.0.5:5432/sonar",
