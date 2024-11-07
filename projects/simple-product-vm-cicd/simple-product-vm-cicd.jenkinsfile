@@ -1,0 +1,167 @@
+// 流水线
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven-3.9.9'
+    }
+
+    options {
+        skipDefaultCheckout true
+        buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '90')
+    }
+
+    parameters {
+        choice choices: ['https://gitee.com/company---shanghai-g/product-web-fe.git',
+                         'https://gitee.com/company---shanghai-g/product-web-be.git',
+        ], description: 'Git代码仓库地址', name: 'srcUrl'
+        choice choices: ['前端部署', '后端部署'], description: '部署方式', name: 'deployType'
+        string defaultValue: 'master', description: '注意：选择应用发布分支', name: 'branchName'
+        choice choices: ['dev', 'test', 'pre', 'prod'], description: '环境列表', name: 'envList'
+    }
+
+    environment {
+        // Gitee私人令牌：Jenkins-DevOps-UserToken
+        gitUserTokenCredentialsId = "fc74ac51-cff8-4ff5-b652-1a7b21f01396"
+
+        // Gitee账号密码：Your_Gitee_Account
+        gitUserPWDCredentialsId = "cb44f570-7f73-4350-89df-10dce865de16"
+    }
+
+    stages {
+
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage("Checkout") {
+            steps {
+                script {
+                    checkout([
+                            $class                           : 'GitSCM',
+                            branches                         : [[name: "${params.branchName}"]],
+                            doGenerateSubmoduleConfigurations: false,
+                            extensions                       : [
+                                    [
+                                            $class             : 'SubmoduleOption',
+                                            disableSubmodules  : false,
+                                            parentCredentials  : false,
+                                            recursiveSubmodules: true, // 设置为true以递归检出子模块
+                                            trackingSubmodules : false // 设置为true以跟踪子模块提交
+                                    ],
+                                    [
+                                            $class     : 'LocalBranch',
+                                            localBranch: "${params.branchName}" // 指定本地分支名称，与远程分支同名
+                                    ],
+                            ],
+                            userRemoteConfigs                : [[url: "${params.srcUrl}", credentialsId: "${env.gitUserPWDCredentialsId}"]]
+                    ])
+                }
+            }
+        }
+
+        stage("Global") {
+            steps {
+                script {
+                    // 服务名称
+                    env.serviceName = "${params.srcUrl}".split('/')[-1].replaceFirst('\\.git$', '')
+                    println("serviceName：${env.serviceName}")
+                    // Git提交ID
+                    commitId = sh returnStdout: true, script: "git rev-parse HEAD"
+                    commitId = commitId - "\n"
+                    env.commitId = commitId[0..7]
+
+                    // 服务版本号（推荐定义："${branchName}-${commitId}"）
+                    env.version = "${params.branchName}-${env.commitId}"
+
+                    // 宿主机远程目录
+                    env.hostPath = "/www/docker-app/${env.serviceName}/${params.envList}"
+
+                    // 修改Jenkins构建描述
+                    currentBuild.description = """ branchName：${params.branchName} """
+                    // 修改Jenkins构建名称
+                    currentBuild.displayName = "${env.version}"
+                }
+            }
+        }
+
+        stage("Build") {
+            steps {
+                script {
+                    println("Build")
+
+                    if ("${params.deployType}" == "前端部署") {
+                        nodejs('nodejs-22') {
+                            sh """
+                                node -v && npm -v && npm cache clean --force && npm config set registry https://registry.npmmirror.com
+                                npm install --legacy-peer-deps
+                                npm run build:${env.envList}
+                            """
+                        }
+                        // 标准化制品产物文件
+                        env.filePath = "dist"
+                        return
+                    }
+                    if ("${params.deployType}" == "后端部署") {
+                        sh """
+                            mvn -v
+                            mvn clean install package -DskipTests
+                        """
+                        // 标准化制品产物文件
+                        env.filePath = "*-server/target"
+                        env.fileSuffix = "jar"
+                        env.newFileName = "${env.serviceName}-${env.version}.${fileSuffix}"
+                        originalFileName = sh returnStdout: true, script: "ls ${env.filePath} | grep -E ${fileSuffix}\$"
+                        originalFileName = "${originalFileName}" - "\n"
+                        // 重命名制品文件
+                        sh "cd ${env.filePath} ; mv ${originalFileName} ${env.newFileName}"
+                        return
+                    }
+
+                }
+            }
+        }
+
+        stage("VM Deploy") {
+            steps {
+                script {
+                    switch ("${params.envList}") {
+                        case "dev":
+                            env.hostname = "192.168.0.1"
+                            break
+                        case "test":
+                            env.hostname = "192.168.0.1"
+                            break
+                        case "pre":
+                            env.hostname = "192.168.0.1"
+                            break
+                        case "prod":
+                            env.hostname = "192.168.0.1"
+                            break
+                    }
+                    println("hostname：${env.hostname}")
+                    sh """
+                        ls -la ${env.filePath}
+                        ssh root@${env.hostname} "mkdir -p ${env.hostPath} && rm -rf ${env.hostPath}/*"
+                    """
+                    if ("${params.deployType}" == "前端部署") {
+                        sh """
+                            # 复制到环境对应服务器的目标目录（需配置加载该环境静态资源目录的NGINX配置文件）
+                            scp -r ${env.filePath}/* root@${env.hostname}:${env.hostPath}/${env.filePath}
+                        """
+                    } else if ("${params.deployType}" == "后端部署") {
+                        sh """
+                            scp *-server/target/${env.newFileName} root@${env.hostname}:${env.hostPath}
+                            scp scripts/service.sh root@${env.hostname}:${env.hostPath}
+                            ssh root@${env.hostname} "sh ${env.hostPath}/service.sh ${env.hostPath} ${env.newFileName} ${params.envList}"
+                        """
+                    }
+                }
+            }
+        }
+
+    }
+
+}
