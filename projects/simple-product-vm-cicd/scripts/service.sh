@@ -16,7 +16,7 @@ fileName=$2
 envList=$3
 
 # 定义不同环境的端口映射
-declare -A ports=([dev]=48080 [test]=9003 [pre]=9004 [prod]=9005)
+declare -A ports=([dev]=9002 [test]=9003 [pre]=9005 [prod]=9000)
 target_port=${ports[$envList]}
 
 # 检查指定环境是否存在映射的端口
@@ -24,10 +24,6 @@ if [ -z "$target_port" ]; then
   echo "错误：未知的环境 '$envList'，请检查环境名称是否正确"
   exit 1
 fi
-
-# 清理待执行的 `at` 任务队列
-echo "清理待执行的任务队列..."
-atq | awk '{print $1}' | xargs -r atrm
 
 # 查找并停止占用目标端口的进程
 echo "检查并停止占用端口 $target_port 的进程..."
@@ -41,4 +37,5 @@ else
 fi
 
 echo "启动服务：${filePath}/${fileName} (${envList} 环境)..."
-echo "/opt/jdk1.8.0_131/bin/java -jar ${filePath}/${fileName} --spring.profiles.active=${envList}" | at now
+# 注意：不要增加单双引号，否则 nohup not working！
+BUILD_ID=dontKillMe nohup /opt/jdk1.8.0_131/bin/java -jar ${filePath}/${fileName} --spring.profiles.active=${envList} >${filePath}/nohup.out 2>&1 &
