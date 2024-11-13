@@ -1,0 +1,44 @@
+replicaCount: 1
+image:
+  repository: 192.168.100.150:8082/proaimltd/devops-web-fe
+  pullPolicy: IfNotPresent
+  tag: v0.1.0-2a4477ba
+imagePullSecrets: []
+nameOverride: ''
+fullnameOverride: ''
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ''
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+service:
+  type: ClusterIP
+  port: 80
+ingress:
+  enabled: true
+  className: ''
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+  - host: test01.devops-web-fe.int.mystweb.cn
+    paths:
+    - path: /
+      pathType: ImplementationSpecific
+  tls: []
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+nodeSelector: {}
+tolerations: []
+affinity: {}

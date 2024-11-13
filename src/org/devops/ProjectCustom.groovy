@@ -1,6 +1,29 @@
 package org.devops
 
 /**
+ * 根据服务名称执行对应的构建工具和版本
+ * @param serviceName 服务名称
+ */
+def executeBuildByServiceName(serviceName) {
+    def build = new Build()
+
+    // 服务名称与构建操作的映射
+    def serviceBuildMap = [
+            "devops-web-be": { build.MavenBuildByJDKVersion("21") },
+            "devops-web-fe": { build.NpmBuildByVersion("nodejs-18") }
+    ]
+
+    // 获取对应服务的构建操作并执行
+    def buildAction = serviceBuildMap[serviceName]
+    // 获取 buildAction 后增加了错误处理，确保在找不到对应服务名称时给出明确的错误信息。
+    if (buildAction) {
+        buildAction()
+    } else {
+        error "No build action defined for service: ${serviceName}"
+    }
+}
+
+/**
  * 获取项目后端Java启动参数
  * @param envList 环境列表
  * @return devops应用后端Java启动参数

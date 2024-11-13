@@ -1,0 +1,370 @@
+// 加载共享库
+@Library("mylib@main") _
+
+// 导入库
+import org.devops.*
+
+// New实例化
+def checkout = new Checkout()
+def build = new Build()
+def notice = new Notice()
+def unitTest = new UnitTest()
+def custom = new Custom()
+def codeScan = new CodeScan()
+def gitlab = new GitLab()
+def artifact = new Artifact()
+def docker = new Docker()
+def kubernetes = new Kubernetes()
+def projectCustom = new ProjectCustom()
+
+// 流水线
+pipeline {
+    agent { label "build" }
+
+    options {
+        skipDefaultCheckout true
+        buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '180', numToKeepStr: '90')
+    }
+
+    parameters {
+        choice choices: ['git@localhost:devops/devops-web-be.git',
+                         'git@localhost:devops/devops-web-fe.git',
+        ], description: 'GitLab代码仓库地址', name: 'srcUrl'
+        string defaultValue: 'main', description: '注意：选择应用发布分支', name: 'branchName'
+        choice choices: ['dev01', 'dev02', 'test01', 'test02', 'test03'], description: '环境列表', name: 'envList'
+        choice choices: ['2048Mi', '128Mi', '4096Mi', '8192Mi', '16384Mi'], description: '最大内存', name: 'memory'
+        choice choices: ['1', '2', '3', '4', '5'], description: '副本数', name: 'replicaCount'
+        choice choices: ['true', 'false'], description: '是否跳过代码扫描', name: 'skipSonar'
+        choice choices: ['true', 'false'], description: '是否跳过单元测试', name: 'skipTests'
+        choice choices: ['false', 'true'], description: '是否跳过CD', name: 'skipCD'
+    }
+
+    environment {
+        // GitLab用户密码访问凭据Id：GitLab-ziming.xing-用户密码（gitserv.proaimltd.com.cn）
+        gitUserPWDCredentialsId = "a6b079ef-64cc-4c54-a342-6aee6d42a898"
+        // GitLab用户Token访问凭据Id：GitLab-DevOps-token（Your_GitLab_Enterprise_Edition_URL，users：devops）
+        gitlabUserTokenCredentialsId = "36e10c3d-997d-4eaa-9e46-d9848d5d6631"
+        // 制品仓库地址
+        artifactRegistry = "192.168.100.150:8081"
+        // 制品仓库访问凭据Id：Nexus-admin-账号密码（192.168.100.150:8081）
+        artifactCredentialsId = "adfe55cc-1f4a-444a-9c9f-7fc635c46a3c"
+        // 制品仓库名称
+        artifactRepository = "devops-artifacts"
+        // 镜像仓库地址
+        imageRegistry = "192.168.100.150:8082"
+        // 镜像仓库访问凭据Id：Harbor-admin-账号密码（192.168.100.150:8082）
+        imageRegistryCredentialsId = "cc81ccc9-962f-42ab-bbe6-fa9383c6938f"
+        // SonarQube访问凭据Id：SonarQube-admin-token（192.168.100.150:9000）
+        sonarqubeUserTokenCredentialsId = "c23d40dd-a6c8-4a17-a0d1-23dd795fe773"
+        // DingTalk-robot-token（Jenkins钉钉群聊）
+        dingTalkTokenCredentialsId = "8c6083c7-e1c2-47c0-9367-b67a9469bcd5"
+        // DingTalk-robot-id（Jenkins钉钉群聊）
+        dingTalkRebotIdCredentialsId = "5213e392-d78e-4a9a-a37e-91f394309df1"
+
+        // 测试报告路径（多模块使用 "**" ，单模块去掉 "**/" 即可）
+        reportsPath = '**/target/surefire-reports/*.xml'
+        // Allure报告路径
+        allureResultsPath = '**/target/allure-results'
+
+        // 注意：Helm Chart仓库地址
+        helmSrcUrl = "git@localhost:devops/devops-k8s-deployment.git"
+        // 注意：Helm Chart分支名称
+        helmBranchName = "main"
+    }
+
+    stages {
+
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage("Checkout") {
+            steps {
+                script {
+                    println("Checkout")
+                    checkout.GetCode("${params.srcUrl}", "${params.branchName}", "${env.gitUserPWDCredentialsId}")
+                }
+            }
+        }
+
+        stage("Global") {
+            steps {
+                script {
+                    // JOB任务前缀（业务名称/组名称）
+                    env.buName = "${params.srcUrl}".split(':')[1].split('/')[0]
+                    println("buName：${env.buName}")
+                    // 服务名称
+                    env.serviceName = "${params.srcUrl}".split('/')[-1].replaceFirst('\\.git$', '')
+                    println("serviceName：${env.serviceName}")
+                    // 先获取 serviceName 的最后一个 - 的位置
+                    def lastDashIndex = "${env.serviceName}".lastIndexOf('-')
+                    println("lastDashIndex：${lastDashIndex}")
+                    // 再获取 serviceName 倒数第二个 - 的位置
+                    def secondLastDashIndex = "${env.serviceName}".lastIndexOf('-', lastDashIndex - 1)
+                    println("secondLastDashIndex：${secondLastDashIndex}")
+                    // 截取末尾两个 - 的字符串（模块名称、模块类型，例：product-web-be）
+                    env.productName = "${env.serviceName}".substring(0, secondLastDashIndex)
+                    println("productName：${env.productName}")
+                    // 获取模块名称（例：网站 = web、同步 = sync）
+                    env.moduleName = "${env.serviceName}".split('-')[-2]
+                    println("moduleName：${env.moduleName}")
+                    // 获取模块类型（例：后端 = be、前端 = fe）
+                    env.moduleType = "${env.serviceName}".split('-')[-1]
+                    println("moduleType：${env.moduleType}")
+
+                    // Git项目Id
+                    env.projectId = projectCustom.getProjectIdByProjectName("${env.serviceName}")
+                    if ("${env.projectId}" == "null") {
+                        env.projectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "${env.buName}", "${env.serviceName}")
+                    }
+                    println("serviceName：${env.serviceName}，projectId：${env.projectId}")
+
+                    // Git提交ID
+                    env.commitId = gitlab.GetShortCommitIdByEightDigit()
+                    // Git提交超链接
+                    env.commitWebURL = gitlab.GetCommitWebURLByApi("${env.gitlabUserTokenCredentialsId}", "${env.projectId}", "${params.branchName}")
+                    // 服务版本号（推荐定义："${branchName}-${commitId}"）
+                    env.version = "${params.branchName}-${env.commitId}"
+
+                    // 服务访问的域名
+                    if ("${env.moduleType}" == "be") {
+                        env.accessDomainName = "${params.envList}.${env.productName}-${env.moduleName}-fe.int.proaimltd.com.cn"
+                    } else {
+                        env.accessDomainName = "${params.envList}.${env.serviceName}.int.proaimltd.com.cn"
+                    }
+                    // 服务本身的域名
+                    env.domainName = "${params.envList}.${env.serviceName}.int.proaimltd.com.cn"
+
+                    // 服务部署的命名空间
+                    env.namespace = "${env.buName}-${env.productName}-${params.envList}"
+
+                    // 修改Jenkins构建描述
+                    currentBuild.description = """ branchName：${params.branchName} \n namespace：${env.namespace} \n serviceName：${env.serviceName} \n commitId：[${env.commitId}](${env.commitWebURL}) \n domainName： \n ${env.domainName} \n accessDomainName：${env.accessDomainName} """
+                    // 修改Jenkins构建名称
+                    currentBuild.displayName = "${env.version}"
+                }
+            }
+        }
+
+        stage("Build") {
+            steps {
+                script {
+                    println("Build")
+                    projectCustom.executeBuildByServiceName("${env.serviceName}")
+                }
+            }
+        }
+
+        stage("UnitTest") {
+            when {
+                environment name: 'skipTests', value: 'false'
+                environment name: 'moduleType', value: 'be'
+            }
+            steps {
+                script {
+                    println("UnitTest")
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        switch ("${env.productName}") {
+                            case "piccadilly":
+                                sh "mvn clean install -DskipTests && mvn -pl piccadilly-entrypoint test && mkdir -p ${env.allureResultsPath}"
+                                break
+                            default:
+                                error "No such tools ... [maven/mavenSkip]"
+                                break
+                        }
+                    }
+                }
+                // 保存测试报告（无论是否有报告都允许为空归档）
+                archiveArtifacts artifacts: "${env.reportsPath}", allowEmptyArchive: true
+                // 分析并发布JUnit测试报告（多模块项目使用 "**/" ，单模块去掉 "**/"）
+                junit "${env.reportsPath}"
+                // Allure分析报告
+                println("AllureReport")
+                allure includeProperties: false, jdk: '', results: [[path: "${env.allureResultsPath}"]]
+            }
+        }
+
+        stage("CodeScan") {
+            when {
+                environment name: 'skipSonar', value: 'false'
+                environment name: 'moduleType', value: 'be'
+            }
+            steps {
+                script {
+                    println("CodeScan")
+                    // 代码扫描 commit-status
+                    codeScan.CodeScan_Sonar("${env.sonarqubeUserTokenCredentialsId}", "${env.gitlabUserTokenCredentialsId}",
+                            "${params.branchName}", "${env.commitId}", "${env.projectId}")
+                }
+            }
+        }
+
+        // 上传制品（Format：raw）
+        stage("PushArtifact") {
+            steps {
+                script {
+                    // Dir：/buName/serviceName/branch-version/serviceName-version.suffix
+                    // target/demo-0.0.1-SNAPSHOT.jar
+                    if ("${env.moduleType}" == "be") {
+                        env.filePath = "target"
+                        fileSuffix = "jar"
+                        env.newFileName = "${env.serviceName}-${env.version}.${fileSuffix}"
+                        // fileSuffix = env.fileName.split('\\.' as Closure)[-1]
+                        originalFileName = sh returnStdout: true, script: "ls ${env.filePath} | grep -E ${fileSuffix}\$"
+                        originalFileName = "${originalFileName}" - "\n"
+                        // 重命名制品文件
+                        sh "cd ${env.filePath} ; mv ${originalFileName} ${env.newFileName}"
+                        // 上传制品
+                        artifact.PushArtifactByApi("${env.artifactRegistry}", "${env.artifactCredentialsId}", "${env.artifactRepository}",
+                                "${env.buName}/${env.serviceName}/${env.version}", "${env.buildType}", "${env.filePath}", "${env.newFileName}")
+                    } else if ("${env.moduleType}" == "fe") {
+                        env.filePath = "dist"
+                        fileSuffix = "tar.gz"
+                        env.newFileName = "${env.serviceName}-${env.version}.${fileSuffix}"
+                        sh """
+                            cd ${env.filePath} && tar -zcvf ${env.newFileName} *
+                        """
+                        // 上传制品
+                        artifact.PushArtifactByApi("${env.artifactRegistry}", "${env.artifactCredentialsId}", "${env.artifactRepository}",
+                                "${env.buName}/${env.serviceName}/${env.version}", "${env.buildType}", "${env.filePath}", "${env.newFileName}")
+                    } else {
+                        env.result = sh returnStdout: true, script: "sh artifact.sh ${env.filePath} ${env.serviceName} ${env.version}" - "\n"
+                        env.newFileName = "${env.result}" - "\n"
+                        println("通过项目内自定义脚本上传制品")
+                    }
+                }
+            }
+        }
+
+        stage("DockerBuild") {
+            steps {
+                script {
+                    // 定义锁定资源的名称，例如：docker-images-lock
+                    def resourceLock = "docker-images-lock"
+                    lock(resource: resourceLock, inversePrecedence: true) {
+                        // imageTag："${params.branchName}-${env.commitId}"
+                        env.imageName = "${env.buName}/${env.serviceName}"
+                        docker.DockerBuildAndPushImage("${env.imageRegistry}", "${env.imageRegistryCredentialsId}",
+                                "${env.imageName}", "${env.version}", "${env.filePath}", "${env.newFileName}")
+                    }
+                }
+            }
+        }
+
+        stage("HelmReleaseFile_CI") {
+            steps {
+                script {
+                    // Git项目Id（devops-k8s-deployment）
+                    k8sProjectId = gitlab.GetProjectId("${env.gitlabUserTokenCredentialsId}", "devops", "devops-k8s-deployment")
+                    // Git文件模板名称
+                    fileName = "values.yaml"
+                    // Git上传文件路径：项目服务名称/values.yaml
+                    filePath = "${env.serviceName}%2f${fileName}"
+                    // 下载Kubernetes部署模板文件
+                    fileData = gitlab.GetRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}",
+                            "${filePath}", "${env.helmBranchName}")
+                    // Kubernetes发布模板文件内容替换并转换Base64（imagePath：镜像仓库地址/镜像名称:镜像标签）
+                    base64Content = kubernetes.HelmReleaseTemplateFileReplaceAndConvertToBase64("${fileName}", "${fileData}",
+                            "${env.imageRegistry}/${env.imageName}", "${env.version}")
+
+                    // 上传替换后的版本文件（新建文件或者更新文件）
+                    // gitlab文件内容变更（URL编码转义符： %2f = / ）
+                    try {
+                        gitlab.CreateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "${env.helmBranchName}", "${filePath}", "${base64Content}")
+                    } catch (e) {
+                        gitlab.UpdateRepositoryFile("${env.gitlabUserTokenCredentialsId}", "${k8sProjectId}", "${env.helmBranchName}", "${filePath}", "${base64Content}")
+                    }
+                }
+            }
+        }
+
+        stage("CompleteHelmReleaseFile") {
+            when {
+                environment name: 'skipCD', value: 'false'
+            }
+            steps {
+                script {
+                    println("Checkout")
+                    sh "[ -d ${env.namespace} ] || mkdir ${env.namespace}"
+                    ws("${WORKSPACE}/${env.namespace}") {
+                        checkout.GetCode("${env.helmSrcUrl}", "${env.helmBranchName}", "${env.gitUserPWDCredentialsId}")
+                    }
+                }
+            }
+        }
+
+        stage("HelmReleaseFile_CD") {
+            when {
+                environment name: 'skipCD', value: 'false'
+            }
+            steps {
+                script {
+                    // Git文件模板名称
+                    fileName = "values.yaml"
+                    // Git模板文件路径：项目服务名称_Helm/values.yaml
+                    filePath = "${env.namespace}/${env.serviceName}/${fileName}"
+                    // 项目定制参数
+                    Map projectParamsMap = projectCustom.getProjectParamsMap("${params.envList}")
+                    // Kubernetes发布模板文件内容替换
+                    kubernetes.HelmReleaseTemplateFileReplace("${filePath}", "${env.domainName}", "${env.accessDomainName}", "${params.memory}", "${params.replicaCount}", projectParamsMap)
+                    println("projectParamsMap：${projectParamsMap}")
+                }
+            }
+        }
+
+        stage("HelmDeploy") {
+            when {
+                environment name: 'skipCD', value: 'false'
+            }
+            steps {
+                script {
+                    kubernetes.HelmDeploy("${env.namespace}", "${env.namespace}/${env.serviceName}", "${env.serviceName}")
+                }
+            }
+        }
+
+        /*stage("HealthCheck") {
+            steps {
+                script {
+                    // 注意：自定义域名需配置Hosts文件！
+                    try {
+                        sleep(5)
+                        result = sh returnStdout: true, script: """ curl "http://${env.domainName}/health" """ - "\n"
+                        if ("ok" == result) {
+                            println("Successful！")
+                        }
+                    } catch (Exception e) {
+                        println(e)
+                    }
+                }
+            }
+        }*/
+
+    }
+
+    post {
+        success {
+            script {
+//                notice.dingTalkNotice("${env.dingTalkTokenCredentialsId}")
+                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
+            }
+        }
+        failure {
+            script {
+                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
+            }
+        }
+        unstable {
+            script {
+                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
+            }
+        }
+        /*always {
+            // clean workspace build
+            cleanWs()
+        }*/
+    }
+
+}

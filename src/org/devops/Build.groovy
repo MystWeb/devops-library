@@ -7,7 +7,7 @@ def MavenBuild() {
     // 使用绝对路径的执行命令
 //    sh "/usr/local/apache-maven/bin/mvn clean package"
     // 配置环境变量的执行命令
-    sh "mvn -v && mvn clean package -DskipTests"
+    sh "mvn -v && mvn clean package"
 }
 
 /**
@@ -18,19 +18,64 @@ def MavenBuildSkipTest() {
 }
 
 /**
- * 自定义Maven版本构建（基于Linux宿主机环境变量）
+ * 基于指定的JDK版本执行Maven构建
+ * @param jdkVersion JDK版本
  */
-def MavenCustomVersionBuild(){
-    sh """
-       export JAVA_HOME=/opt/jdk1.8.0_391
-       mvn -v
-       mvn clean package --settings "${M2_HOME}"/conf/settings-jdk-1.8.xml -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true
-    
-       # export JAVA_HOME=/opt/jdk-17.0.9
-       # export MAVEN_OPTS="-Dmaven.compiler.source=17 -Dmaven.compiler.target=17"
-    
-       cp -ar /data/nfs/shared-tools/gams/ ./gams
-    """
+def MavenBuildByJDKVersion(jdkVersion) {
+    def jdkMap = [
+            "1.8": "/opt/jdk1.8.0_391",
+            "11" : "/opt/jdk-11.0.19",
+            "17" : "/opt/jdk-17.0.9",
+            "21" : "/opt/jdk-21.0.5"
+    ]
+
+    def jdkHome = jdkMap[jdkVersion]
+    if (jdkHome) {
+        sh """
+            export JAVA_HOME=${jdkHome}
+            export MAVEN_OPTS="-Dmaven.compiler.source=${jdkVersion} -Dmaven.compiler.target=${jdkVersion}"
+            # mvn clean package --settings "${M2_HOME}"/conf/settings-jdk-1.8.xml -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true
+            mvn -v
+            mvn clean package -Dpmd.skip=true -Dcheckstyle.skip=true -DskipTests -Djaxb2.skip=true
+        """
+    } else {
+        error "No such JDK Version ... "
+    }
+}
+
+/**
+ * 基于指定的版本执行Npm构建
+ * @param version 版本
+ */
+def NpmBuildByVersion(version) {
+    def map = [
+            "16": "/opt/node-v16.20.2-linux-x64",
+            "18": "/opt/node-v18.18.2-linux-x64",
+    ]
+
+    nodejs(version) {
+        sh """
+            node -v && npm -v
+            npm cache clean --force
+            yarn -v
+            yarn config set registry https://registry.npmmirror.com
+            yarn && yarn run build
+        """
+    }
+
+    /*def home = map[version]
+    if (home) {
+        sh """
+            export NODE_HOME=${home}
+            node -v && npm -v
+            npm cache clean --force
+            yarn -v
+            yarn config set registry https://registry.npmmirror.com
+            yarn && yarn run build
+        """
+    } else {
+        error "No such Version ... "
+    }*/
 }
 
 /**
@@ -58,35 +103,14 @@ def GoBuild(configPath = "demo.go") {
  * Npm构建
  */
 def NpmBuild() {
-    sh "node -v && npm -v && npm cache clean --force && npm config set registry https://registry.npmmirror.com && npm install && npm run build"
+    sh "node -v && npm -v && npm cache clean --force && npm config set registry https://registry.npmmirror.com && npm install && NODE_OPTIONS=--max-old-space-size=8192 npm run build"
 }
 
 /**
  * Yarn构建
  */
 def YarnBuild() {
-    sh "npm cache clean --force && node -v && npm -v && yarn -v && yarn config set registry https://registry.npmmirror.com && yarn && yarn run build"
-}
-
-/**
- * Jenkins 自定义NodeJS版本构建
- * http://192.168.100.150:8080/manage/configureTools/
- * NodeJS安装：
- *  别名：nodejs-18
- *  版本：NodeJS 18.19.0
- *  Global npm packages to install：npm install -g pnpm
- *  Global npm packages refresh hours：72
- */
-def NodeJSCustomVersionBuild(version) {
-    nodejs(version) {
-        sh """
-            node -v && npm -v
-            npm cache clean --force
-            yarn -v
-            yarn config set registry https://registry.npmmirror.com
-            yarn && yarn run build
-        """
-    }
+    sh "npm cache clean --force && node -v && npm -v && yarn -v && yarn config set registry https://registry.npmmirror.com && yarn && NODE_OPTIONS=--max-old-space-size=8192 yarn run build"
 }
 
 /**
@@ -115,9 +139,6 @@ def CodeBuild(buildTool) {
             break;
         case "yarn":
             YarnBuild()
-            break;
-        case "nodejs-18":
-            NodeJSCustomVersionBuild("nodejs-18")
             break;
         default:
             error "No such tools ... [maven/mavenSkip/gradle/ant/go/npm/yarn]"
