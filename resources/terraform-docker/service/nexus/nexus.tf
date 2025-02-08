@@ -43,8 +43,7 @@ resource "docker_container" "nexus" {
   memory          = local.container_memory
   memory_swap     = local.container_memory_swap
   privileged      = local.container_privileged
-  max_retry_count = 3
-  restart         = "on-failure"
+  restart         = "always"
   networks_advanced {
     name         = local.container_network
     ipv4_address = local.container_ip

@@ -77,8 +77,7 @@ resource "docker_container" "sonarqube" {
   memory_swap     = local.container_memory_swap
   env             = local.container_env
   stop_timeout    = local.container_stop_timeout
-  max_retry_count = 3
-  restart         = "on-failure"
+  restart         = "always"
   networks_advanced {
     name         = local.container_network
     ipv4_address = local.container_ip

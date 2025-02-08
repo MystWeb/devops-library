@@ -18,7 +18,7 @@
 # Pull image
 resource "docker_image" "jenkins" {
   # (String) The name of the Docker image, including any tags or SHA256 repo digests.
-  name         = "jenkins/jenkins:2.462.1-lts-jdk11"
+  name         = "jenkins/jenkins:2.462.3-lts-jdk11"
   # (Boolean) If true, then the Docker image won't be deleted on destroy operation.
   # If this is false, it will delete the image from the docker local storage on destroy operation.
   keep_locally = true
@@ -68,8 +68,7 @@ resource "docker_container" "jenkins" {
   user            = local.container_user
   privileged      = local.container_privileged
   env             = local.container_env
-  max_retry_count = 3
-  restart         = "on-failure"
+  restart         = "always"
   networks_advanced {
     name         = local.container_network
     ipv4_address = local.container_ip
