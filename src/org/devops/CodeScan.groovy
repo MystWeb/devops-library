@@ -96,22 +96,26 @@ def CodeScan_Sonar_Maven(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredent
  * 插件链接：https://github.com/mc1arke/sonarqube-community-branch-plugin、
  * https://github.com/xuhuisheng/sonar-l10n-zh、
  * https://github.com/gabrie-allaigre/sonar-gitlab-plugin
+ * https://plugins.jenkins.io/sonar/
  */
 def CodeScan_Sonar(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId, projectVersion, commitId, projectId) {
     cliPath = "/opt/sonar-scanner/bin"
-    withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
-                     string(credentialsId: "${gitlabUserTokenCredentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
-        // 远程构建时推荐使用CommitID作为代码扫描-项目版本
-        sh """
-            ${cliPath}/sonar-scanner \
-            -Dsonar.login=${SONARQUBE_USER_TOKEN} \
-            -Dsonar.projectVersion=${projectVersion} \
-            -Dsonar.branch.name=${projectVersion} \
-            -Dsonar.gitlab.commit_sha=${commitId} \
-            -Dsonar.gitlab.ref_name=${projectVersion} \
-            -Dsonar.gitlab.project_id=${projectId} \
-            -Dsonar.gitlab.user_token=${GITLAB_USER_TOKEN}
-        """
+    withSonarQubeEnv('SonarQube') {  // Jenkins系统配置-SonarQube servers已配置的Name
+        withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
+                         string(credentialsId: "${gitlabUserTokenCredentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
+            // 远程构建时推荐使用CommitID作为代码扫描-项目版本
+            sh """
+                ${cliPath}/sonar-scanner \
+                -Dsonar.login=${SONARQUBE_USER_TOKEN} \
+                -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                -Dsonar.projectVersion=${projectVersion} \
+                -Dsonar.branch.name=${projectVersion} \
+                -Dsonar.gitlab.commit_sha=${commitId} \
+                -Dsonar.gitlab.ref_name=${projectVersion} \
+                -Dsonar.gitlab.project_id=${projectId} \
+                -Dsonar.gitlab.user_token=${GITLAB_USER_TOKEN}
+            """
+        }
     }
 }
 
