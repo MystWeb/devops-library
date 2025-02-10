@@ -12,8 +12,8 @@ def SonarQubeMetricsAndNotify(sonarHostUrl, projectKey, branchName, sonarqubeUse
     withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
                      string(credentialsId: "${dingTalkRobotIdCredentialsId}", variable: 'DINGTALK_ROBOT_ID')]) {
 
-        // 等待2分钟以确保SonarQube任务完成
-        sleep(120)
+        // 等待5分钟以确保SonarQube任务完成
+        sleep(300)
 
         // 获取 SonarQube 扫描结果
         def json = sh(script: """

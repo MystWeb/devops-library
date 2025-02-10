@@ -82,7 +82,7 @@ pipeline {
         stage('Check Quality Gate') {
             steps {
                 script {
-                    timeout(time: 3, unit: 'MINUTES') {
+                    timeout(time: 5, unit: 'MINUTES') {
                         def qg = waitForQualityGate()
                         if (qg.status == 'OK') {
                             updateGitlabCommitStatus name: 'sonarqube', state: 'success', description: 'SonarQube Quality Gate passed'
@@ -94,6 +94,7 @@ pipeline {
                 }
             }
         }
+
     }
 
     post {
