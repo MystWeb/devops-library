@@ -2,16 +2,15 @@
 @Library("mylib@main") _
 
 // 导入库
+
 import org.devops.Checkout
 import org.devops.CodeScan
 import org.devops.GitLab
-import org.devops.Notice
 
 // New实例化
 def checkout = new Checkout()
 def codeScan = new CodeScan()
 def gitlab = new GitLab()
-def notice = new Notice()
 
 pipeline {
     agent { label "build" }
@@ -31,6 +30,7 @@ pipeline {
         srcUrl = "${env.gitlabSourceRepoURL}"
         buName = "${env.gitlabSourceNamespace}"
         commitId = "${env.gitlabMergeRequestLastCommit}"
+        actionType = "${env.gitlabActionType}"
     }
 
     stages {
@@ -82,12 +82,12 @@ pipeline {
         stage('Check Quality Gate') {
             steps {
                 script {
-                    timeout(time: 5, unit: 'MINUTES') {
+                    timeout(time: 10, unit: 'MINUTES') {
                         def qg = waitForQualityGate()
                         if (qg.status == 'OK') {
-                            updateGitlabCommitStatus name: 'sonarqube', state: 'success', description: 'SonarQube Quality Gate passed'
+                            updateGitlabCommitStatus name: 'sonarqube', state: 'success'
                         } else {
-                            updateGitlabCommitStatus name: 'sonarqube', state: 'failed', description: 'SonarQube Quality Gate failed'
+                            updateGitlabCommitStatus name: 'sonarqube', state: 'failed'
                             error "❌ 代码质量检查未通过: ${qg.status}"
                         }
                     }
@@ -103,13 +103,13 @@ pipeline {
         }
         success {
             script {
-                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
+                echo "✅ 任务成功，不需要额外通知"
             }
         }
         failure {
             script {
-                updateGitlabCommitStatus name: 'sonarqube', state: 'failed', description: 'SonarQube Quality Gate failed'
-                notice.dingTalkPluginNotice("${env.dingTalkRebotIdCredentialsId}")
+                updateGitlabCommitStatus name: 'sonarqube', state: 'failed'
+                echo "❌ 任务失败，已更新 GitLab 状态"
             }
         }
     }
