@@ -251,9 +251,9 @@ pipeline {
                     def resourceLock = "docker-images-lock"
                     lock(resource: resourceLock, inversePrecedence: true) {
                         // imageTag："${params.branchName}-${env.commitId}"
-                        env.imageName = "${env.buName}/${env.serviceName}"
                         docker.DockerBuildAndPushImage("${env.imageRegistry}", "${env.imageRegistryCredentialsId}",
-                                "${env.imageName}", "${env.version}", "${env.filePath}", "${env.newFileName}")
+                                "${env.buName}", "${env.serviceName}", "${env.version}", "${env.filePath}",
+                                "${env.newFileName}")
                     }
                 }
             }
@@ -273,7 +273,7 @@ pipeline {
                             "${filePath}", "${env.helmBranchName}")
                     // Kubernetes发布模板文件内容替换并转换Base64（imagePath：镜像仓库地址/镜像名称:镜像标签）
                     base64Content = kubernetes.HelmReleaseTemplateFileReplaceAndConvertToBase64("${fileName}", "${fileData}",
-                            "${env.imageRegistry}/${env.imageName}", "${env.version}")
+                            "${env.imageRegistry}/${env.buName}/${env.serviceName}", "${env.version}")
 
                     // 上传替换后的版本文件（新建文件或者更新文件）
                     // gitlab文件内容变更（URL编码转义符： %2f = / ）

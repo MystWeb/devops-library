@@ -19,7 +19,7 @@
 # Pull image
 resource "docker_image" "jenkins" {
   # (String) The name of the Docker image, including any tags or SHA256 repo digests.
-  name         = "jenkins/jenkins:2.492.1-lts-jdk21"
+  name         = "jenkins/jenkins:2.497-jdk21"
   # (Boolean) If true, then the Docker image won't be deleted on destroy operation.
   # If this is false, it will delete the image from the docker local storage on destroy operation.
   keep_locally = true
@@ -56,6 +56,10 @@ locals {
     {
       host_path      = "/data/jenkins_home"
       container_path = "/var/jenkins_home"
+    },
+    {
+      host_path      = "/data/jenkins_ssh"
+      container_path = "/root/.ssh"
     }
   ]
 }

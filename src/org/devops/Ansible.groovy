@@ -11,6 +11,7 @@ package org.devops
  * @param version 服务版本号（推荐定义："${branchName}-${commitId}"）
  * @param fileName 文件名称
  * @param port 服务监听的端口号
+ * 插件链接：https://plugins.jenkins.io/extended-choice-parameter/
  */
 def AnsibleDeploy(targetHosts, targetDir, serviceName, version, fileName, port) {
     // 删除旧的hosts
