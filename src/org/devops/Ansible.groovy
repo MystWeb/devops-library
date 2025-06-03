@@ -56,3 +56,49 @@ def AnsibleDeploy(targetHosts, targetDir, serviceName, version, fileName, port) 
         && sh service.sh ${serviceName} ${version} ${port} check" -u root
     """
 }
+
+/**
+ * 使用 Ansible 脚本部署到目标主机
+ *
+ * 该函数根据提供的主机列表，利用 Ansible 脚本进行自动化部署。首先会检测目标主机的连通性，
+ * 然后远程执行指定脚本进行部署。
+ *
+ * @param targetHosts 目标主机列表，多个主机用逗号分隔
+ * @param script 执行的脚本路径
+ * @param version 部署版本
+ */
+def deployUsingAnsibleScript(targetHosts, script, version) {
+    if (targetHosts == null || targetHosts.isEmpty()) {
+        echo "Target Hosts is empty."
+        return
+    }
+    if (script == null || script.isEmpty()) {
+        echo "Script is empty."
+        return
+    }
+    if (version == null || version.isEmpty()) {
+        echo "Version is empty."
+        return
+    }
+
+    // 输出目标主机列表
+    echo "Target Hosts: ${targetHosts}"
+
+    // 删除旧的hosts
+    sh "rm -fr hosts"
+    // 根据选择的发布主机生成hosts
+    targetHosts.split(',').each { host ->  // 使用字符串分隔而不是集合迭代器
+        sh "echo ${host} >> hosts"
+    }
+    sh "cat hosts"
+
+    sh """
+        # 主机连通性检测
+        ansible "${targetHosts}" -m ping -i hosts
+
+        # 执行部署脚本
+        ansible ${targetHosts} -m shell -a "sh ${script} ${version}" -u root -i hosts
+    """
+
+    echo "ansible ${targetHosts} -m shell -a sh ${script} ${version} -u root -i hosts"
+}

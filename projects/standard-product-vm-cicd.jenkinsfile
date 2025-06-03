@@ -150,28 +150,32 @@ pipeline {
 
                     def resourceLock = "docker-images-lock"
                     lock(resource: resourceLock, inversePrecedence: true) {
-                        if ("${env.serviceName}" == "piccadilly-web-backend" && ["v2.5.0", "v2.5.1"].contains(params.branchName)) {
-                            // 查找匹配的文件并重命名
-                            def originalFileName = sh(returnStdout: true, script: """
-                            find ${env.filePath} -maxdepth 1 -type f -name "*${fileSuffix}"
-                            """).trim()
-                            if (originalFileName) {
-                                sh "mv ${originalFileName} ${env.filePath}/${env.newFileName}"
-                            } else {
-                                error "未找到匹配的文件！"
-                            }
-                            docker.DockerBuildAndPushImage("${env.imageRegistry}", "${env.imageRegistryCredentialsId}",
-                                    "${env.buName}", "${env.serviceName}", "${env.version}", "${env.filePath}",
-                                    "${env.newFileName}")
-                        } else if ("${env.serviceName}" == "piccadilly-web-backend" && ["v2.6.0", "v2.7.0"].contains(params.branchName)) {
-                            def services = ["gateway", "entrypoint", "auth", "sso-entrypoint"]
-                            services.each { service ->
-                                def imageName = "${env.productName}-${service}"
+                        if ("${env.serviceName}" == "piccadilly-web-backend") {
+                            if (params.refName.startsWith("v2.5.") || params.refName.startsWith("v2.4.") || params.refName.startsWith("v2.3.")) {
+                                // v2.5.x及以下版本逻辑
+                                def originalFileName = sh(returnStdout: true, script: """
+                            find ${env.filePath} -maxdepth 1 -type f -name "*${env.fileSuffix}"
+                        """).trim()
+                                if (originalFileName) {
+                                    sh "mv ${originalFileName} ${env.filePath}/${env.newFileName}"
+                                } else {
+                                    error "未找到匹配的文件！"
+                                }
                                 docker.DockerBuildAndPushImage("${env.imageRegistry}", "${env.imageRegistryCredentialsId}",
-                                        "${env.buName}", "${imageName}", "${env.version}", "${env.filePath}",
-                                        "${imageName}-0.1.0.${env.fileSuffix}")
+                                        "${env.buName}", "${env.serviceName}", "${env.version}", "${env.filePath}",
+                                        "${env.newFileName}")
+                            } else {
+                                // 非v2.5版本逻辑（默认走v2.6、以后v2.7等也能兼容）
+                                def services = ["gateway", "entrypoint", "auth", "sso-entrypoint"]
+                                services.each { service ->
+                                    def imageName = "${env.productName}-${service}"
+                                    docker.DockerBuildAndPushImage("${env.imageRegistry}", "${env.imageRegistryCredentialsId}",
+                                            "${env.buName}", "${imageName}", "${env.version}", "${env.filePath}",
+                                            "${imageName}-0.1.0.${env.fileSuffix}")
+                                }
                             }
                         } else {
+                            // 其他服务直接打包推送
                             docker.DockerBuildAndPushImage("${env.imageRegistry}", "${env.imageRegistryCredentialsId}",
                                     "${env.buName}", "${env.serviceName}", "${env.version}", "${env.filePath}",
                                     "${env.newFileName}")

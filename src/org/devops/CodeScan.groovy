@@ -99,6 +99,12 @@ def CodeScan_Sonar_Maven(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredent
  * https://plugins.jenkins.io/sonar/
  */
 def CodeScan_Sonar(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId, projectVersion, commitId, projectId) {
+
+    // 如果分支名为空，直接终止构建
+    if (projectVersion == null || projectVersion.trim() == "") {
+        error "❌ 检测到分支名为空，SonarQube 扫描已终止！请检查 GitLab webhook 参数注入是否正确。"
+    }
+
     cliPath = "/opt/sonar-scanner/bin"
     withSonarQubeEnv('SonarQube') {  // Jenkins系统配置-SonarQube servers已配置的Name
         withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
