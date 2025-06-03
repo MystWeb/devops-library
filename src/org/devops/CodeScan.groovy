@@ -130,6 +130,45 @@ def CodeScan_Sonar(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId
 }
 
 /**
+ * 跳过未更改的代码扫描-Sonar
+ * @param sonarqubeUserTokenCredentialsId SonarQube访问凭据Id
+ * @param gitlabUserTokenCredentialsId GitLab用户Token访问凭据Id
+ * @param projectVersion 代码扫描-Sonar-项目版本（推荐使用分支名称）
+ * @param commitId 提交Id
+ * @param projectId 项目Id
+ * 插件链接：https://github.com/mc1arke/sonarqube-community-branch-plugin、
+ * https://github.com/xuhuisheng/sonar-l10n-zh、
+ * https://github.com/gabrie-allaigre/sonar-gitlab-plugin
+ */
+def scanCodeWithSonarSkipUnchanged(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId, projectVersion,
+                                   commitId, projectId, sourceBranch , targetBranch) {
+    cliPath = "/opt/sonar-scanner/bin"
+    withSonarQubeEnv('SonarQube') {  // 让 Jenkins 自动提供 SonarQube 地址
+        withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
+                         string(credentialsId: "${gitlabUserTokenCredentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
+            // 执行 SonarQube 扫描
+            try {
+                sh """
+                    ${cliPath}/sonar-scanner \
+                    -Dsonar.login=${SONARQUBE_USER_TOKEN} \
+                    -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                    -Dsonar.projectVersion=${projectVersion} \
+                    -Dsonar.branch.name=${projectVersion} \
+                    -Dsonar.gitlab.commit_sha=${commitId} \
+                    -Dsonar.gitlab.ref_name=${projectVersion} \
+                    -Dsonar.gitlab.project_id=${projectId} \
+                    -Dsonar.gitlab.user_token=${GITLAB_USER_TOKEN} \
+                    -Dsonar.git.previousRevision=${targetBranch} \
+                    -Dsonar.branch.name=${sourceBranch}
+                """
+            } catch (e) {
+                error "SonarQube 代码扫描失败: ${e.getMessage()}"
+            }
+        }
+    }
+}
+
+/**
  * 初始化质量配置
  * @param lang 语言
  * @param projectName 项目名称
