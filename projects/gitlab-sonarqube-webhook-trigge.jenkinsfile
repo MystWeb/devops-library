@@ -71,7 +71,7 @@ pipeline {
                     sh "[ -d ${projectId} ] || mkdir ${projectId}"
                     ws("${WORKSPACE}/${projectId}") {
                         checkout.GetCode("${env.srcUrl}", "${env.branchName}", "${env.gitlabKeysCredentialsId}")
-                        if ("${env.actionType}" == "MERGE") {
+                        if ("${env.actionType}" == "MERGE" && "${env.GITHUB_HEAD_REF}" != null) {
                             codeScan.scanCodeWithSonarSkipUnchanged(
                                     "${env.sonarqubeUserTokenCredentialsId}",
                                     "${env.gitlabUserTokenCredentialsId}", "${env.branchName}",
