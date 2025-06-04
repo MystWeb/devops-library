@@ -150,7 +150,7 @@ pipeline {
 
                     def resourceLock = "docker-images-lock"
                     lock(resource: resourceLock, inversePrecedence: true) {
-                        if ("${env.serviceName}" == "piccadilly-web-backend") {
+                        if ("${env.serviceName}" == "devops-web-backend") {
                             if (params.refName.startsWith("v2.5.") || params.refName.startsWith("v2.4.") || params.refName.startsWith("v2.3.")) {
                                 // v2.5.x及以下版本逻辑
                                 def originalFileName = sh(returnStdout: true, script: """

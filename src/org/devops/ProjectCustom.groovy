@@ -1,6 +1,24 @@
 package org.devops
 
 /**
+ * 根据模块类型返回文件路径和文件后缀配置
+ * @param moduleType 模块类型
+ * @return 文件路径和后缀的映射
+ */
+def resolveFileConfig(moduleType) {
+    switch (moduleType) {
+        case "be":
+        case "backend":
+            return [filePath: "target", fileSuffix: "jar"]
+        case "fe":
+        case "frontend":
+            return [filePath: "dist", fileSuffix: "tar.gz"]
+        default:
+            return [filePath: null, fileSuffix: null]
+    }
+}
+
+/**
  * 根据服务名称执行对应的构建工具和版本
  * @param serviceName 服务名称
  */
