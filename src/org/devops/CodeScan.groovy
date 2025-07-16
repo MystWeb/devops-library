@@ -1,56 +1,90 @@
 package org.devops
 
+
+def checkVueTscLint() {
+    echo "Checking Vue and TypeScript lint..."
+
+    // 执行 lint:vue-tsc 命令
+    sh 'npm run lint:vue-tsc'
+}
+
 /**
  * SonarQube指标&通知
  * @param sonarHostUrl SonarQube访问地址
  * @param projectKey SonarQube项目key
- * @param branchName SonarQube项目分支
+ * @param branchName 分支名称
+ * @param mergeRequestId GitLab Merge Request ID（适用于 PR 分支）
  * @param sonarqubeUserTokenCredentialsId SonarQube用户Token凭据ID
  * @param dingTalkRobotIdCredentialsId 钉钉机器人Token凭据ID
  */
-def SonarQubeMetricsAndNotify(sonarHostUrl, projectKey, branchName, sonarqubeUserTokenCredentialsId, dingTalkRobotIdCredentialsId) {
-    withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
-                     string(credentialsId: "${dingTalkRobotIdCredentialsId}", variable: 'DINGTALK_ROBOT_ID')]) {
+def SonarQubeMetricsAndNotify(sonarHostUrl, projectKey, branchName, mergeRequestId, sonarqubeUserTokenCredentialsId, dingTalkRobotIdCredentialsId) {
+    // 安全转换函数
+    def safeToInt = { str ->
+        try {
+            return str?.isInteger() ? str.toInteger() : 0
+        } catch (e) {
+            return 0
+        }
+    }
 
-        // 等待5分钟以确保SonarQube任务完成
-        sleep(300)
+    def safeToDouble = { str ->
+        try {
+            return str?.isDouble() ? str.toDouble() : 0.0
+        } catch (e) {
+            return 0.0
+        }
+    }
 
+    withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN')]) {
         // 获取 SonarQube 扫描结果
-        def json = sh(script: """
+        def json = null
+        if (branchName != null && mergeRequestId == null) {
+            json = sh(script: """
             curl -s -u ${SONARQUBE_USER_TOKEN}: "${sonarHostUrl}/api/measures/component?component=${projectKey}&branch=${branchName}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density"
         """, returnStdout: true).trim()
+            currentBuild.description = "[🔍 SonarQube 分析报告](${sonarHostUrl}/dashboard?branch=${branchName}&id=${projectKey})"
+        } else if (mergeRequestId != null) {
+            json = sh(script: """
+            curl -s -u ${SONARQUBE_USER_TOKEN}: "${sonarHostUrl}/api/measures/component?component=${projectKey}&pullRequest=${mergeRequestId}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density"
+        """, returnStdout: true).trim()
+            currentBuild.description = "[🔍 SonarQube 分析报告](${sonarHostUrl}/dashboard?id=${projectKey}&pullRequest=${mergeRequestId})"
+        } else {
+            error "❌ 分支名称和合并请求ID都未提供，无法获取 SonarQube 扫描结果！请检查参数设置。"
+        }
+        echo "获取扫描结果: ${json}"
 
         // 解析 JSON 数据
         def jsonObject = readJSON(text: json)
         def metrics = ['bugs', 'vulnerabilities', 'code_smells', 'coverage', 'duplicated_lines_density'].collectEntries {
-            [(it): jsonObject.component.measures.find { measure -> measure.metric == it }?.value ?: 'N/A']
+            [(it): jsonObject.component.measures.find { measure -> measure.metric == it }?.value ?: '0']
         }
 
-        // 颜色逻辑：如果关键字段为 0，显示绿色；如果大于 0，显示红色
-        def bugColor = "${metrics.bugs}".toInteger() > 0 ? 'red' : 'green'
-        def vulnerabilityColor = "${metrics.vulnerabilities}".toInteger() > 0 ? 'red' : 'green'
-        def codeSmellColor = "${metrics.code_smells}".toInteger() > 0 ? 'orange' : 'green'
-        // 假设 80% 覆盖率为合格标准
-        def coverageColor = "${metrics.coverage}".toDouble() < 80.0 ? 'orange' : 'green'
-        // 假设 10% 重复率为警戒线
-        def duplicatedLinesColor = "${metrics.duplicated_lines_density}".toDouble() > 10.0 ? 'red' : 'green'
+        // 颜色逻辑
+        def bugColor = safeToInt(metrics.bugs) > 0 ? 'red' : 'green'
+        def vulnerabilityColor = safeToInt(metrics.vulnerabilities) > 0 ? 'red' : 'green'
+        def codeSmellColor = safeToInt(metrics.code_smells) > 0 ? 'orange' : 'green'
+        def coverageColor = safeToDouble(metrics.coverage) < 80.0 ? 'orange' : 'green'
+        def duplicatedLinesColor = safeToDouble(metrics.duplicated_lines_density) > 10.0 ? 'red' : 'green'
 
         // 构建通知消息
+        def buildColor = "${currentBuild.currentResult}" == 'SUCCESS' ? 'green' : "${currentBuild.currentResult}" == 'FAILURE' ? 'red' : 'orange'
         def message = [
-                "### SonarQube 扫描结果 - 项目：${projectKey}",
+                "### SonarQube 扫描结果 - ${projectKey}",
+                "- **分支**: ${branchName ?: 'N/A'}",
                 "- **Bugs**: <font color=${bugColor}>${metrics.bugs}</font>",
                 "- **Vulnerabilities**: <font color=${vulnerabilityColor}>${metrics.vulnerabilities}</font>",
                 "- **Code Smells**: <font color=${codeSmellColor}>${metrics.code_smells}</font>",
                 "- **Coverage**: <font color=${coverageColor}>${metrics.coverage}%</font>",
-                "- **Duplicated Lines Density**: <font color=${duplicatedLinesColor}>${metrics.duplicated_lines_density}%</font>"
+                "- **Duplicated Lines Density**: <font color=${duplicatedLinesColor}>${metrics.duplicated_lines_density}%</font>",
+                "---",
+                "- 任务：[${currentBuild.displayName}](${env.BUILD_URL})",
+                "- 状态：<font color=${buildColor}>${currentBuild.currentResult}</font>",
+                "- 持续时间：${currentBuild.durationString.split('and counting')[0]}",
+                "- 执行人：${currentBuild.buildCauses.shortDescription}",
+                "- 描述：${currentBuild.description ?: '无描述'}",
         ]
 
-        // 发送钉钉通知
-        dingtalk robot: "${DINGTALK_ROBOT_ID}",
-                type: "MARKDOWN",
-                title: "SonarQube 扫描通知 - ${projectKey}",
-                text: message,
-                atAll: false
+        new Notice().dingTalkPluginNotice("${dingTalkRobotIdCredentialsId}", "SonarQube 扫描结果 - ${projectKey}", message)
     }
 }
 
@@ -106,7 +140,7 @@ def CodeScan_Sonar(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId
     }
 
     cliPath = "/opt/sonar-scanner/bin"
-    withSonarQubeEnv('SonarQube') {  // Jenkins系统配置-SonarQube servers已配置的Name
+    withSonarQubeEnv('SonarQube') { // Jenkins系统配置-SonarQube servers已配置的Name
         withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
                          string(credentialsId: "${gitlabUserTokenCredentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
             // 远程构建时推荐使用CommitID作为代码扫描-项目版本
@@ -130,6 +164,55 @@ def CodeScan_Sonar(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId
 }
 
 /**
+ * 获取合并请求信息，用于判断是否需要执行代码扫描
+ * @param actionType 触发类型（PUSH/MERGE）
+ * @param sourceBranch 源分支名称
+ * @param targetBranch 目标分支名称
+ * @param mergeRequestId 合并请求ID
+ * @param projectId GitLab项目ID
+ * @param srcUrl 源代码仓库URL
+ * @param gitlabUserTokenCredentialsId GitLab用户令牌凭证ID
+ * @return 包含合并请求信息的Map
+ */
+def getMergeRequestInfo(actionType, sourceBranch, targetBranch,
+                        mergeRequestId, projectId, srcUrl,
+                        gitlabUserTokenCredentialsId) {
+    def isPush = actionType == "PUSH"
+    def isMerge = actionType == "MERGE"
+    targetBranch = targetBranch ?: "main"
+
+    if (isMerge && mergeRequestId) {
+        return [sourceBranch: sourceBranch, targetBranch: targetBranch, mergeRequestId: mergeRequestId, performScan: true]
+    }
+
+    if (isPush) {
+        def performScan = false
+        def mrId = ""
+        withCredentials([string(credentialsId: gitlabUserTokenCredentialsId, variable: 'GITLAB_TOKEN')]) {
+            def host = srcUrl.replaceFirst(/^https?:\/\//, '').replaceFirst(/^git@/, '').tokenize(/[:\/]/)[0]
+            def api = "https://${host}/api/v4/projects/${projectId}/merge_requests?state=opened"
+
+            def openMRs = sh(script: """curl -s --header "PRIVATE-TOKEN: \$GITLAB_TOKEN" "${api}" | jq -c '.[]'""", returnStdout: true).trim()
+            if (openMRs) {
+                openMRs.readLines().each {
+                    def mr = readJSON text: it
+                    if (mr.source_branch == sourceBranch) {
+                        performScan = true
+                        targetBranch = mr.target_branch
+                        mrId = mr.iid.toString()
+                        echo "✅ 匹配到 MR #${mrId}：${sourceBranch} → ${targetBranch}"
+                        return
+                    }
+                }
+            }
+        }
+        return [sourceBranch: sourceBranch, targetBranch: targetBranch, mergeRequestId: mrId, performScan: performScan]
+    }
+
+    return [sourceBranch: sourceBranch, targetBranch: targetBranch, mergeRequestId: mergeRequestId, performScan: false]
+}
+
+/**
  * 跳过未更改的代码扫描-Sonar
  * @param sonarqubeUserTokenCredentialsId SonarQube访问凭据Id
  * @param gitlabUserTokenCredentialsId GitLab用户Token访问凭据Id
@@ -140,26 +223,54 @@ def CodeScan_Sonar(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId
  * https://github.com/xuhuisheng/sonar-l10n-zh、
  * https://github.com/gabrie-allaigre/sonar-gitlab-plugin
  */
-def scanCodeWithSonarSkipUnchanged(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId, projectVersion,
-                                   commitId, projectId, sourceBranch , targetBranch) {
+def scanCodeWithSonarSkipUnchanged(sonarqubeUserTokenCredentialsId, gitlabUserTokenCredentialsId, commitId, projectId, sourceBranch, targetBranch, gitlabMergeRequestId) {
     cliPath = "/opt/sonar-scanner/bin"
-    withSonarQubeEnv('SonarQube') {  // 让 Jenkins 自动提供 SonarQube 地址
+
+    // 安全检查分支名
+    if (!targetBranch || !sourceBranch) {
+        error "目标分支和源分支不能为空"
+    }
+
+    // 获取 MR 变更文件列表（使用 git diff 对比源分支和目标分支）
+    def changedFiles = sh(
+            script: """    
+                # 获取变更文件并过滤特定类型
+                diff_output=\$(git diff --name-only origin/${targetBranch} origin/${sourceBranch})
+                if [ -z "\$diff_output" ]; then
+                    echo ""
+                else
+                    echo "\$diff_output" | grep -E '\\.(java|xml|properties|groovy)\$' || echo ""
+                fi
+            """,
+            returnStdout: true).trim()
+    if (changedFiles == "") {
+        echo "⚠️ 无代码变更文件，跳过 Sonar 扫描"
+        return
+    }
+    changedFiles = changedFiles.replace('\n', ',')
+    echo "变更文件：${changedFiles}"
+    // 将变更文件列表写入 inclusions.txt 文件，避免 SonarQube 扫描时参数列表过长
+//    writeFile file: 'inclusions.txt', text: changedFiles.readLines().join(',\n')
+//    def inclusionStr = readFile('inclusions.txt').trim()
+//    echo "变更文件合并：${inclusionStr}"
+
+    withSonarQubeEnv('SonarQube') { // 让 Jenkins 自动提供 SonarQube 地址
         withCredentials([string(credentialsId: "${sonarqubeUserTokenCredentialsId}", variable: 'SONARQUBE_USER_TOKEN'),
                          string(credentialsId: "${gitlabUserTokenCredentialsId}", variable: 'GITLAB_USER_TOKEN')]) {
-            // 执行 SonarQube 扫描
             try {
                 sh """
                     ${cliPath}/sonar-scanner \
                     -Dsonar.login=${SONARQUBE_USER_TOKEN} \
                     -Dsonar.host.url=${env.SONAR_HOST_URL} \
-                    -Dsonar.projectVersion=${projectVersion} \
-                    -Dsonar.branch.name=${projectVersion} \
+                    -Dsonar.projectVersion=${sourceBranch} \
+                    -Dsonar.pullrequest.provider=GitLab \
+                    -Dsonar.pullrequest.key=${gitlabMergeRequestId} \
+                    -Dsonar.pullrequest.branch=${sourceBranch} \
+                    -Dsonar.pullrequest.base=${targetBranch} \
+                    -Dsonar.inclusions="${changedFiles}" \
                     -Dsonar.gitlab.commit_sha=${commitId} \
-                    -Dsonar.gitlab.ref_name=${projectVersion} \
                     -Dsonar.gitlab.project_id=${projectId} \
-                    -Dsonar.gitlab.user_token=${GITLAB_USER_TOKEN} \
-                    -Dsonar.git.previousRevision=${targetBranch} \
-                    -Dsonar.branch.name=${sourceBranch}
+                    -Dsonar.gitlab.user_token=${GITLAB_USER_TOKEN}
                 """
             } catch (e) {
                 error "SonarQube 代码扫描失败: ${e.getMessage()}"

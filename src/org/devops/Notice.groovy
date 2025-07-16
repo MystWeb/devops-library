@@ -53,15 +53,22 @@ def EmailNotice(emailAddress, buildStatus) {
 def dingTalkNotice(dingTalkTokenCredentialsId) {
     withCredentials([string(credentialsId: "${dingTalkTokenCredentialsId}", variable: 'DINGTALK_ROBOT_TOKEN')]) {
         def ddApi = "https://oapi.dingtalk.com/robot/send?access_token=${DINGTALK_ROBOT_TOKEN}"
+        def messageContent = "Jenkins Job '${env.JOB_NAME} [${currentBuild.displayName}]' Build finished, see details: ${env.BUILD_URL}"
         def ddMessage = """
         {
             "msgtype": "text",
             "text": {
-                "content": "Jenkins Job '${env.JOB_NAME} [${currentBuild.displayName}]' Build finished, see details: ${env.BUILD_URL}"
+                "content": "${messageContent}"
             }
         }
-    """
-        sh "curl -H 'Content-Type: application/json' -X POST -d '${ddMessage}' ${ddApi}"
+        """
+        // 发送钉钉通知并捕获可能的错误
+        try {
+            sh "curl -H 'Content-Type: application/json' -X POST -d '${ddMessage}' ${ddApi}"
+        } catch (e) {
+            echo "Failed to send DingTalk notification: ${e.message}"
+        }
+
     }
 }
 
@@ -70,7 +77,6 @@ def dingTalkNotice(dingTalkTokenCredentialsId) {
  * 插件链接：https://plugins.jenkins.io/dingding-notifications
  * 参考链接：https://www.jianshu.com/p/563db03e1ed9、
  * https://open.dingtalk.com/document/orgapp/faq-robot#afd23bb55em7r
- * 注意：Jenkins|系统管理|钉钉|钉钉全局配置|机器人（新增）配置后才会有DingTalkRobotId！
  */
 def dingTalkPluginNotice(dingTalkRobotId) {
     // Jenkins DingTalk插件的钉钉通知代码
@@ -94,5 +100,61 @@ def dingTalkPluginNotice(dingTalkRobotId) {
                         "- 描述：${newDescription}"
                 ],
                 atAll: false
+    }
+}
+
+/**
+ * 钉钉通知-Plugin（支持自定义Markdown描述与富文本格式）
+ * @param dingTalkRobotId 钉钉机器人凭据ID
+ * @param title 自定义标题（可选）
+ * @param customContent 自定义内容（支持List<String>或String类型）
+ * @param mentionAll 是否@所有人（默认false）
+ */
+def dingTalkPluginNotice(String dingTalkRobotId, String title = null, def customContent, boolean mentionAll = false) {
+    withCredentials([string(credentialsId: dingTalkRobotId, variable: 'DINGTALK_ROBOT_ID')]) {
+        // 处理标题（默认使用JOB名称）
+        def finalTitle = title ?: "Jenkins 通知 - [${env.JOB_NAME}](${env.JOB_URL})"
+
+        // 处理状态颜色（若构建结果为空，默认为灰色）
+        def color = currentBuild.currentResult ?: 'gray'
+        color = color == 'SUCCESS' ? 'green' :
+                color == 'FAILURE' ? 'red' :
+                        color == 'UNSTABLE' ? 'orange' : 'gray'
+
+        // 构建基础内容块
+        def baseContent = [
+                "### Jenkins JOB：[${env.JOB_NAME}](${env.JOB_URL})",
+                "---",
+                "- 任务：[${currentBuild.displayName ?: '无'}](${env.BUILD_URL})",
+                "- 状态：<font color=${color}>${currentBuild.currentResult ?: '未执行'}</font>",
+                "- 持续时间：${currentBuild.durationString?.split('and counting')[0] ?: 'N/A'}",
+                "- 执行人：${currentBuild.buildCauses?.shortDescription ?: '系统触发'}"
+        ]
+
+        // 处理自定义内容（支持String或List<String>）
+        def contentList = []
+        if (customContent instanceof String) {
+            contentList = customContent.readLines()
+        } else if (customContent instanceof List) {
+            contentList = customContent
+        } else if (customContent) {
+            contentList = [customContent.toString()]
+        }
+
+        // 添加描述内容（优先使用自定义内容，其次使用构建描述）
+        def descriptionContent = contentList.isEmpty() ?
+                currentBuild.description.readLines().collect { "  - ${it}" } :
+                contentList.collect { it.startsWith('-') ? it : "  - ${it}" }
+
+        // 合并最终内容
+        def finalText = baseContent + ["- 描述："] + descriptionContent
+
+        // 发送钉钉通知
+        dingtalk robot: DINGTALK_ROBOT_ID,
+                type: "MARKDOWN",
+                title: finalTitle,
+                picUrl: 'https://www.jenkins.io/images/logos/cute/cute.png',
+                text: finalText,
+                atAll: mentionAll
     }
 }
